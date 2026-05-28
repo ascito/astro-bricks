@@ -1,0 +1,41 @@
+---
+/**
+ * image — Image avec alt et lazy loading
+ * Schema catalog : { src, alt, width?, height?, loading?, fit?, rounded? }
+ */
+interface Props {
+  src: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  loading?: 'lazy' | 'eager';
+  fit?: 'cover' | 'contain' | 'fill' | 'none';
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  src, alt, width, height,
+  loading = 'lazy',
+  fit = 'cover',
+  rounded = 'none',
+  _brickId, _brickType,
+  ...rest
+} = Astro.props;
+
+const fitClass = { cover: 'object-cover', contain: 'object-contain', fill: 'object-fill', none: 'object-none' }[fit];
+const roundClass = {
+  none: '', sm: 'rounded-sm', md: 'rounded-md', lg: 'rounded-lg', full: 'rounded-full',
+}[rounded];
+---
+<img
+  src={src}
+  alt={alt}
+  width={width}
+  height={height}
+  loading={loading}
+  decoding="async"
+  class:list={[fitClass, roundClass]}
+  {...rest}
+/>

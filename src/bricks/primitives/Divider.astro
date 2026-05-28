@@ -1,0 +1,33 @@
+---
+/**
+ * divider — Ligne de séparation horizontale ou verticale
+ * Schema catalog : { orientation?, spacing?, color? }
+ */
+interface Props {
+  orientation?: 'horizontal' | 'vertical';
+  spacing?: 'none' | 'sm' | 'md' | 'lg';
+  color?: 'default' | 'subtle' | 'strong';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { orientation = 'horizontal', spacing = 'md', color = 'default', _brickId, _brickType, ...rest } = Astro.props;
+
+const colorClass = {
+  default: 'border-gray-300',
+  subtle:  'border-gray-200',
+  strong:  'border-gray-500',
+}[color];
+
+if (orientation === 'vertical') {
+  const padClass = { none: 'mx-0', sm: 'mx-2', md: 'mx-4', lg: 'mx-6' }[spacing];
+  return Astro.slots.render('default', undefined);
+}
+
+const padClass = { none: 'my-0', sm: 'my-2', md: 'my-4', lg: 'my-8' }[spacing];
+---
+{orientation === 'horizontal' ? (
+  <hr class:list={['border-t', colorClass, padClass]} {...rest} />
+) : (
+  <span class:list={['inline-block w-px self-stretch border-l', colorClass, { none: 'mx-0', sm: 'mx-2', md: 'mx-4', lg: 'mx-6' }[spacing]]} aria-hidden="true" {...rest} />
+)}

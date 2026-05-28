@@ -1,0 +1,42 @@
+---
+/**
+ * card — Carte avec image, titre et description
+ * Schema catalog : { variant?, padding?, hoverable? }
+ * Slots : header, body, footer
+ */
+interface Props {
+  variant?: 'default' | 'elevated' | 'outlined' | 'ghost';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
+  hoverable?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { variant = 'default', padding = 'md', hoverable = false, _brickId, _brickType, ...rest } = Astro.props;
+
+const variantClass = {
+  default:  'border border-gray-200 bg-white',
+  elevated: 'bg-white shadow-md',
+  outlined: 'border-2 border-gray-300 bg-white',
+  ghost:    'bg-gray-50',
+}[variant];
+
+const padClass = { none: '', sm: 'p-3', md: 'p-5', lg: 'p-8' }[padding];
+const hoverClass = hoverable ? 'transition hover:-translate-y-0.5 hover:shadow-lg cursor-pointer' : '';
+---
+<article class:list={['rounded-lg overflow-hidden', variantClass, hoverClass]} {...rest}>
+  {Astro.slots.has('header') && (
+    <header class:list={['border-b border-gray-200', padClass]}>
+      <slot name="header" />
+    </header>
+  )}
+  <div class={padClass}>
+    <slot name="body" />
+    <slot />
+  </div>
+  {Astro.slots.has('footer') && (
+    <footer class:list={['border-t border-gray-200', padClass]}>
+      <slot name="footer" />
+    </footer>
+  )}
+</article>

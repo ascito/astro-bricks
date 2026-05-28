@@ -1,0 +1,37 @@
+---
+/**
+ * alert — Message d'alerte avec variantes
+ * Schema catalog : { title?, content, variant?, dismissible?, icon? }
+ */
+interface Props {
+  title?: string;
+  content: string;
+  variant?: 'info' | 'success' | 'warning' | 'danger';
+  dismissible?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { title, content, variant = 'info', dismissible = false, _brickId, _brickType, ...rest } = Astro.props;
+
+const variantClass = {
+  info:    'border-l-blue-500 bg-blue-50 text-blue-900',
+  success: 'border-l-green-500 bg-green-50 text-green-900',
+  warning: 'border-l-amber-500 bg-amber-50 text-amber-900',
+  danger:  'border-l-red-500 bg-red-50 text-red-900',
+}[variant];
+
+const iconChar = { info: 'ℹ', success: '✓', warning: '⚠', danger: '✕' }[variant];
+---
+<div role="alert" class:list={['flex gap-3 rounded-md border-l-4 p-4', variantClass]} {...rest}>
+  <span aria-hidden="true" class="text-lg font-bold leading-tight">{iconChar}</span>
+  <div class="flex-1">
+    {title && <p class="font-semibold mb-1">{title}</p>}
+    <p set:html={content} />
+  </div>
+  {dismissible && (
+    <button type="button" aria-label="Fermer" class="self-start text-current opacity-60 hover:opacity-100" onclick="this.closest('[role=alert]').remove()">
+      ×
+    </button>
+  )}
+</div>

@@ -1,0 +1,37 @@
+{
+  "name": "astro-bricks",
+  "version": "0.0.1",
+  "description": "Implémentation Astro de la spec ascito/bricks — compose des pages Astro à partir de compositions JSON",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./Render.astro": "./src/Render.astro",
+    "./catalog.json": "./src/catalog.json",
+    "./bricks/*": "./src/bricks/*"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "docs/"
+  ],
+  "keywords": [
+    "astro",
+    "bricks",
+    "composition",
+    "design-system",
+    "json-schema"
+  ],
+  "author": "ascito",
+  "license": "MIT",
+  "peerDependencies": {
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ascito/astro-bricks.git"
+  }
+}

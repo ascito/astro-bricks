@@ -1,0 +1,33 @@
+---
+/**
+ * BrickNode — rend récursivement une brique résolue.
+ *
+ * Pattern :
+ *  1. On récupère le composant Astro depuis le BRICK_REGISTRY
+ *  2. On lui passe les inputs comme props
+ *  3. On résout les slots = on rend récursivement les children, groupés par nom de slot
+ *  4. Les children sont passés via les <Fragment slot="..."> Astro natifs
+ */
+import type { ResolvedBrick } from '~/engine/types';
+import { BRICK_REGISTRY } from '~/engine/registry';
+import Fallback from '~/bricks/Fallback.astro';
+
+interface Props {
+  node: ResolvedBrick;
+}
+
+const { node } = Astro.props;
+const Component = (BRICK_REGISTRY[node.brick] as any) ?? Fallback;
+const slotNames = Object.keys(node.children);
+---
+
+<Component {...node.inputs} _brickId={node.id} _brickType={node.brick}>
+  {slotNames.length === 0 && Component === Fallback && (
+    <span>Brique inconnue : <code>{node.brick}</code></span>
+  )}
+  {slotNames.map((slotName) => (
+    <Fragment slot={slotName}>
+      {node.children[slotName].map((child) => <Astro.self node={child} />)}
+    </Fragment>
+  ))}
+</Component>

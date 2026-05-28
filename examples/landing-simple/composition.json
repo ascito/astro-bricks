@@ -1,0 +1,90 @@
+{
+  "id": "landing-simple",
+  "name": "Landing simple de démonstration",
+  "bricks": [
+    {
+      "id": "hero-main",
+      "brick": "hero",
+      "inputs": {
+        "eyebrow": "DÉMO ASTRO-BRICKS",
+        "title": "Compose des pages en JSON",
+        "subtitle": "L'IA assemble les briques, tu valides. Le rendu est en HTML/Astro statique, ultra-rapide.",
+        "overlay": "none",
+        "textColor": "dark",
+        "height": "md",
+        "align": "center"
+      },
+      "slots": { "actions": ["cta-1", "cta-2"] }
+    },
+    {
+      "id": "cta-1",
+      "brick": "button",
+      "inputs": { "label": "Voir le catalogue", "variant": "primary", "size": "lg", "href": "#catalog" }
+    },
+    {
+      "id": "cta-2",
+      "brick": "button",
+      "inputs": { "label": "GitHub", "variant": "outline", "size": "lg", "href": "https://github.com/ascito/bricks", "target": "_blank" }
+    },
+    {
+      "id": "breadcrumb-main",
+      "brick": "breadcrumb",
+      "inputs": {
+        "showHome": true,
+        "items": [
+          { "label": "Démos", "href": "/demos/" },
+          { "label": "Landing simple" }
+        ]
+      }
+    },
+    {
+      "id": "main-container",
+      "brick": "container",
+      "inputs": { "maxWidth": "md", "padding": "md" },
+      "slots": { "children": ["section-title", "section-text", "info-alert", "faq-block"] }
+    },
+    {
+      "id": "section-title",
+      "brick": "heading",
+      "inputs": { "content": "Pourquoi composer en JSON ?", "level": 2 }
+    },
+    {
+      "id": "section-text",
+      "brick": "text",
+      "inputs": {
+        "content": "Le JSON est validé par schema, lisible par humain comme par IA, portable entre frameworks, et permet à un LLM d'assembler des pages sans générer de code brut.",
+        "size": "md"
+      }
+    },
+    {
+      "id": "info-alert",
+      "brick": "alert",
+      "inputs": {
+        "title": "Repo en early stage",
+        "content": "Sur les 93 briques de la spec, 15 sont implémentées dans cette première itération. Voir <code>docs/REVUE-CATALOG.md</code> pour la roadmap.",
+        "variant": "info"
+      }
+    },
+    {
+      "id": "faq-block",
+      "brick": "accordion",
+      "inputs": {
+        "variant": "default",
+        "items": [
+          {
+            "question": "Pourquoi pas du JSX/React directement ?",
+            "answer": "<p>Le JSX est <strong>un langage</strong>, le LLM doit produire du code. Bricks transforme la production de pages en <strong>assemblage de structures de données validées</strong> — beaucoup plus sûr et déterministe.</p>"
+          },
+          {
+            "question": "Est-ce que ça remplace Astro ?",
+            "answer": "<p>Non, <code>astro-bricks</code> est <strong>une lib Astro</strong>. Tu peux mixer les deux : composantes Astro custom + briques composées.</p>"
+          },
+          {
+            "question": "Comment ajouter une nouvelle brique ?",
+            "answer": "<p>1. Crée le composant dans <code>src/bricks/</code> 2. Importe-le dans <code>src/engine/registry.ts</code> 3. Aligne ses props sur le schema du catalog.</p>"
+          }
+        ]
+      }
+    }
+  ]
+}

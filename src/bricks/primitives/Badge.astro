@@ -1,0 +1,34 @@
+---
+/**
+ * badge — Badge ou tag informatif
+ * Schema catalog : { content, variant?, size? }
+ */
+interface Props {
+  content: string;
+  variant?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'neutral';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { content, variant = 'primary', size = 'md', _brickId, _brickType, ...rest } = Astro.props;
+
+const variantClass = {
+  primary:   'bg-blue-100 text-blue-800',
+  secondary: 'bg-purple-100 text-purple-800',
+  success:   'bg-green-100 text-green-800',
+  warning:   'bg-amber-100 text-amber-800',
+  danger:    'bg-red-100 text-red-800',
+  neutral:   'bg-gray-100 text-gray-800',
+}[variant];
+
+const sizeClass = {
+  xs: 'px-1.5 py-0.5 text-[10px]',
+  sm: 'px-2 py-0.5 text-xs',
+  md: 'px-2.5 py-1 text-sm',
+  lg: 'px-3 py-1.5 text-base',
+}[size];
+---
+<span class:list={['inline-flex items-center rounded-full font-medium', variantClass, sizeClass]} {...rest}>
+  {content}
+</span>

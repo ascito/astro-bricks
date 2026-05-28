@@ -1,0 +1,39 @@
+---
+/**
+ * text — Paragraphe de texte
+ * Schema catalog : { content: string, size?, weight?, align?, color? }
+ */
+interface Props {
+  content: string;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  weight?: 'light' | 'normal' | 'medium' | 'semibold' | 'bold';
+  align?: 'left' | 'center' | 'right' | 'justify';
+  color?: 'default' | 'muted' | 'primary' | 'success' | 'warning' | 'danger';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  content,
+  size = 'md',
+  weight = 'normal',
+  align = 'left',
+  color = 'default',
+  _brickId, _brickType,
+  ...rest
+} = Astro.props;
+
+const sizeClass = { xs: 'text-xs', sm: 'text-sm', md: 'text-base', lg: 'text-lg', xl: 'text-xl' }[size];
+const weightClass = {
+  light: 'font-light', normal: 'font-normal', medium: 'font-medium',
+  semibold: 'font-semibold', bold: 'font-bold',
+}[weight];
+const alignClass = {
+  left: 'text-left', center: 'text-center', right: 'text-right', justify: 'text-justify',
+}[align];
+const colorClass = {
+  default: '', muted: 'text-gray-500', primary: 'text-blue-700',
+  success: 'text-green-700', warning: 'text-amber-700', danger: 'text-red-700',
+}[color];
+---
+<p class:list={[sizeClass, weightClass, alignClass, colorClass]} {...rest}>{content}</p>

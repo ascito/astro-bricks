@@ -1,0 +1,30 @@
+---
+/**
+ * Render — composant racine du moteur astro-bricks.
+ *
+ * Usage :
+ * ```astro
+ * ---
+ * import { Render } from 'astro-bricks';
+ * import composition from './ma-page.json';
+ * ---
+ * <Render composition={composition} />
+ * ```
+ *
+ * Le composant résout la composition (refs → arbre) puis rend chaque brique
+ * récursivement via le BRICK_REGISTRY.
+ */
+import { resolveComposition } from '~/engine/resolveComposition';
+import type { Composition, ResolvedBrick } from '~/engine/types';
+import { BRICK_REGISTRY } from '~/engine/registry';
+import BrickNode from '~/BrickNode.astro';
+
+interface Props {
+  composition: Composition;
+}
+
+const { composition } = Astro.props;
+const resolved = resolveComposition(composition);
+---
+
+{resolved.roots.map((root: ResolvedBrick) => <BrickNode node={root} />)}

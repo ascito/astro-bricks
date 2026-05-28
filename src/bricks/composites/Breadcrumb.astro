@@ -1,0 +1,40 @@
+---
+/**
+ * breadcrumb — Fil d'Ariane de navigation
+ * Schema catalog : { items: [{label, href?}], separator?, showHome? }
+ */
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  items: BreadcrumbItem[];
+  separator?: 'slash' | 'chevron' | 'arrow' | 'dot';
+  showHome?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { items = [], separator = 'chevron', showHome = false, _brickId, _brickType, ...rest } = Astro.props;
+
+const sepChar = { slash: '/', chevron: '›', arrow: '→', dot: '·' }[separator];
+const fullItems = showHome ? [{ label: 'Accueil', href: '/' }, ...items] : items;
+---
+<nav aria-label="Fil d'Ariane" class="text-sm" {...rest}>
+  <ol class="flex flex-wrap items-center gap-2">
+    {fullItems.map((item, i) => {
+      const isLast = i === fullItems.length - 1;
+      return (
+        <li class="flex items-center gap-2">
+          {item.href && !isLast ? (
+            <a href={item.href} class="text-blue-700 hover:text-blue-900 underline-offset-2 hover:underline">{item.label}</a>
+          ) : (
+            <span class="text-gray-600" aria-current={isLast ? 'page' : undefined}>{item.label}</span>
+          )}
+          {!isLast && <span aria-hidden="true" class="text-gray-400">{sepChar}</span>}
+        </li>
+      );
+    })}
+  </ol>
+</nav>
