@@ -96,9 +96,9 @@ const showLabel = variant !== 'compact';
   {networks.map((network) => {
     const isCopy = network === 'copy';
     const Tag = isCopy ? 'button' : 'a';
-    const tagProps = (isCopy
+    const tagProps = isCopy
       ? { type: 'button', 'data-copy-link': computedUrl }
-      : { href: urls[network], target: network === 'mail' ? undefined : '_blank', rel: 'noopener noreferrer' }) as Record<string, unknown>;
+      : { href: urls[network], target: network === 'mail' ? undefined : '_blank', rel: 'noopener noreferrer' };
 
     const hoverClass = {
       facebook: 'hover:bg-blue-600 hover:text-white',
