@@ -14,10 +14,10 @@
  * Le composant résout la composition (refs → arbre) puis rend chaque brique
  * récursivement via le BRICK_REGISTRY.
  */
-import { resolveComposition } from '~/engine/resolveComposition';
-import type { Composition, ResolvedBrick } from '~/engine/types';
-import { BRICK_REGISTRY } from '~/engine/registry';
-import BrickNode from '~/BrickNode.astro';
+import { resolveComposition } from './engine/resolveComposition';
+import type { Composition, ResolvedBrick } from './engine/types';
+import { BRICK_REGISTRY } from './engine/registry';
+import BrickNode from './BrickNode.astro';
 
 interface Props {
   composition: Composition;

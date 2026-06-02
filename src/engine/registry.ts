@@ -8,49 +8,49 @@
  */
 
 // ─── Primitives ───
-import Heading from '~/bricks/primitives/Heading.astro';
-import TextBrick from '~/bricks/primitives/Text.astro';
-import Button from '~/bricks/primitives/Button.astro';
-import Container from '~/bricks/primitives/Container.astro';
-import Stack from '~/bricks/primitives/Stack.astro';
-import ImageBrick from '~/bricks/primitives/Image.astro';
-import Link from '~/bricks/primitives/Link.astro';
-import Badge from '~/bricks/primitives/Badge.astro';
-import Divider from '~/bricks/primitives/Divider.astro';
-import Spacer from '~/bricks/primitives/Spacer.astro';
+import Heading from '../bricks/primitives/Heading.astro';
+import TextBrick from '../bricks/primitives/Text.astro';
+import Button from '../bricks/primitives/Button.astro';
+import Container from '../bricks/primitives/Container.astro';
+import Stack from '../bricks/primitives/Stack.astro';
+import ImageBrick from '../bricks/primitives/Image.astro';
+import Link from '../bricks/primitives/Link.astro';
+import Badge from '../bricks/primitives/Badge.astro';
+import Divider from '../bricks/primitives/Divider.astro';
+import Spacer from '../bricks/primitives/Spacer.astro';
 
 // ─── Composites ───
-import Card from '~/bricks/composites/Card.astro';
-import Hero from '~/bricks/composites/Hero.astro';
-import Accordion from '~/bricks/composites/Accordion.astro';
-import Alert from '~/bricks/composites/Alert.astro';
-import Breadcrumb from '~/bricks/composites/Breadcrumb.astro';
-import ShareButtons from '~/bricks/composites/ShareButtons.astro';
-import Separator from '~/bricks/composites/Separator.astro';
-import SectionHeader from '~/bricks/composites/SectionHeader.astro';
+import Card from '../bricks/composites/Card.astro';
+import Hero from '../bricks/composites/Hero.astro';
+import Accordion from '../bricks/composites/Accordion.astro';
+import Alert from '../bricks/composites/Alert.astro';
+import Breadcrumb from '../bricks/composites/Breadcrumb.astro';
+import ShareButtons from '../bricks/composites/ShareButtons.astro';
+import Separator from '../bricks/composites/Separator.astro';
+import SectionHeader from '../bricks/composites/SectionHeader.astro';
 
 // ─── Business ───
-import BackToTop from '~/bricks/business/BackToTop.astro';
-import Disclosure from '~/bricks/business/Disclosure.astro';
-import Faq from '~/bricks/business/Faq.astro';
-import AffiliateLink from '~/bricks/business/AffiliateLink.astro';
-import ProduitCard from '~/bricks/business/ProduitCard.astro';
-import ArticleCard from '~/bricks/business/ArticleCard.astro';
+import BackToTop from '../bricks/business/BackToTop.astro';
+import Disclosure from '../bricks/business/Disclosure.astro';
+import Faq from '../bricks/business/Faq.astro';
+import AffiliateLink from '../bricks/business/AffiliateLink.astro';
+import ProduitCard from '../bricks/business/ProduitCard.astro';
+import ArticleCard from '../bricks/business/ArticleCard.astro';
 
 // ─── Nav ───
-import HeaderNav from '~/bricks/nav/Header.astro';
-import FooterNav from '~/bricks/nav/Footer.astro';
-import BreadcrumbNav from '~/bricks/nav/Breadcrumb.astro';
+import HeaderNav from '../bricks/nav/Header.astro';
+import FooterNav from '../bricks/nav/Footer.astro';
+import BreadcrumbNav from '../bricks/nav/Breadcrumb.astro';
 
 // ─── SEO (injectent du JSON-LD, pas de rendu visuel) ───
-import SeoHead from '~/bricks/seo/SeoHead.astro';
-import JsonLdArticle from '~/bricks/seo/JsonLdArticle.astro';
-import JsonLdProduct from '~/bricks/seo/JsonLdProduct.astro';
-import JsonLdBrand from '~/bricks/seo/JsonLdBrand.astro';
-import JsonLdItemList from '~/bricks/seo/JsonLdItemList.astro';
-import JsonLdBreadcrumb from '~/bricks/seo/JsonLdBreadcrumb.astro';
-import JsonLdFaq from '~/bricks/seo/JsonLdFaq.astro';
-import JsonLdOrganization from '~/bricks/seo/JsonLdOrganization.astro';
+import SeoHead from '../bricks/seo/SeoHead.astro';
+import JsonLdArticle from '../bricks/seo/JsonLdArticle.astro';
+import JsonLdProduct from '../bricks/seo/JsonLdProduct.astro';
+import JsonLdBrand from '../bricks/seo/JsonLdBrand.astro';
+import JsonLdItemList from '../bricks/seo/JsonLdItemList.astro';
+import JsonLdBreadcrumb from '../bricks/seo/JsonLdBreadcrumb.astro';
+import JsonLdFaq from '../bricks/seo/JsonLdFaq.astro';
+import JsonLdOrganization from '../bricks/seo/JsonLdOrganization.astro';
 
 /**
  * Map id catalog → composant Astro.
