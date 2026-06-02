@@ -1,0 +1,51 @@
+---
+/**
+ * Disclosure — Bandeau de transparence affiliation + prix indicatifs.
+ *
+ * Conformité :
+ *  - DGCCRF (loi française sur la transparence de l'influence commerciale)
+ *  - CGU Amazon Associates ("disclose your affiliation")
+ *
+ * À placer en haut des pages produit / comparatif / guide d'achat.
+ *
+ * Customisation :
+ *  - `variant` : `'full'` (affiliation + prix) ou `'affiliation-only'` (juste l'affiliation)
+ *  - `class` : surcharge complète des classes du conteneur
+ *
+ * Par défaut : palette neutre amber (compatible toutes les marques).
+ */
+interface Props {
+  variant?: 'full' | 'affiliation-only';
+  /** Nom du programme d'affiliation. Défaut : `'Amazon'`. */
+  affiliateProgram?: string;
+  /** Surcharge complète des classes du conteneur. */
+  class?: string;
+}
+
+const {
+  variant = 'full',
+  affiliateProgram = 'Amazon',
+  class: customClass = 'border-l-4 border-amber-500 bg-amber-50',
+} = Astro.props;
+---
+
+<aside
+  role="note"
+  data-brick="disclosure"
+  class:list={['mb-8 rounded-md px-5 py-4 text-sm text-slate-700', customClass]}
+>
+  <p class="mb-1.5">
+    <strong class="font-semibold text-slate-900">Transparence :</strong>
+    cette page contient des liens d'affiliation {affiliateProgram}. Si vous achetez via
+    ces liens, nous percevons une commission — sans surcoût pour vous.
+    Cela soutient notre travail et n'influence pas nos recommandations.
+  </p>
+  {variant === 'full' && (
+    <p class="text-xs text-slate-500">
+      <strong>Prix indicatifs :</strong> les prix affichés ont été constatés
+      récemment et servent de repère. Les prix réels varient en permanence —
+      consultez la fiche {affiliateProgram} ou le site marque pour le montant exact au
+      moment de votre achat.
+    </p>
+  )}
+</aside>

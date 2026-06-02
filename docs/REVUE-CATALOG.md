@@ -130,7 +130,7 @@ S'il n'existe pas, l'ajouter — c'est le composite qui combine `label` + `input
 | `prose` | composite | Wrapper Markdown rich (typographie article) |
 | `pull-quote` | primitive | Citation décorative en gros dans l'article |
 | `aside-note` | composite | Encadré note/warning/info (différent de alert) |
-| `share-buttons` | composite | Partage social (Twitter/X, LinkedIn, mail, copier lien) |
+| ✅ `share-buttons` | composite | **IMPLÉMENTÉE** — Partage social FB/X/WhatsApp/LinkedIn/mail/copy avec icônes SVG inline, zéro tracker tiers, bouton "Copier" avec feedback toast |
 | `related-articles` | composite | « À lire aussi » avec 3-4 cards |
 
 ### Pour le SEO / structure

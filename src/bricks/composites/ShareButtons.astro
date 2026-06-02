@@ -1,0 +1,192 @@
+---
+/**
+ * share-buttons — Boutons de partage social first-party
+ *
+ * Schema catalog :
+ *   {
+ *     title?: string,
+ *     description?: string,
+ *     url?: string,         // défaut : URL canonique de la page courante (Astro.url)
+ *     siteUrl?: string,     // défaut : Astro.site (depuis astro.config)
+ *     networks?: ('facebook' | 'twitter' | 'whatsapp' | 'linkedin' | 'mail' | 'copy')[],
+ *     variant?: 'default' | 'compact',
+ *     align?: 'left' | 'center' | 'right',
+ *   }
+ *
+ * Caractéristiques :
+ *   - Aucune dépendance, aucun script tiers, RGPD-friendly
+ *   - Icônes SVG inline
+ *   - Bouton "copy" avec feedback visuel (toast + check icon)
+ *   - Stylé en Tailwind (palette neutre, surchargable via classes utilitaires)
+ */
+
+type Network = 'facebook' | 'twitter' | 'whatsapp' | 'linkedin' | 'mail' | 'copy';
+
+interface Props {
+  title?: string;
+  description?: string;
+  url?: string;
+  siteUrl?: string;
+  networks?: Network[];
+  variant?: 'default' | 'compact';
+  align?: 'left' | 'center' | 'right';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title = 'Découvrez cette page',
+  description = '',
+  url,
+  siteUrl,
+  networks = ['facebook', 'twitter', 'whatsapp', 'mail', 'copy'],
+  variant = 'default',
+  align = 'left',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+// URL canonique : prop > Astro.url
+const computedSite = siteUrl || Astro.site?.toString().replace(/\/$/, '') || '';
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const computedUrl = url || `${computedSite}${currentPath}`;
+
+const encodedUrl = encodeURIComponent(computedUrl);
+const encodedTitle = encodeURIComponent(title);
+const encodedText = encodeURIComponent(
+  `${title}${description ? ' - ' + description : ''}`.trim(),
+);
+
+const urls: Record<Network, string> = {
+  facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+  twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`,
+  whatsapp: `https://wa.me/?text=${encodedText}%20${encodedUrl}`,
+  linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
+  mail: `mailto:?subject=${encodedTitle}&body=${encodedText}%20${encodedUrl}`,
+  copy: '#',
+};
+
+const labels: Record<Network, string> = {
+  facebook: 'Facebook',
+  twitter: 'X (Twitter)',
+  whatsapp: 'WhatsApp',
+  linkedin: 'LinkedIn',
+  mail: 'Email',
+  copy: 'Copier le lien',
+};
+
+const alignClass =
+  align === 'center' ? 'justify-center' : align === 'right' ? 'justify-end' : 'justify-start';
+
+const showLabel = variant !== 'compact';
+---
+
+<div
+  data-brick="share-buttons"
+  class:list={['share-buttons flex items-center gap-2 my-6', alignClass]}
+  role="group"
+  aria-label="Partager cette page"
+  {...rest}
+>
+  {showLabel && (
+    <span class="text-sm text-slate-500 mr-2 hidden sm:inline font-medium">Partager :</span>
+  )}
+
+  {networks.map((network) => {
+    const isCopy = network === 'copy';
+    const Tag = isCopy ? 'button' : 'a';
+    const tagProps: Record<string, unknown> = isCopy
+      ? { type: 'button', 'data-copy-link': computedUrl }
+      : { href: urls[network], target: network === 'mail' ? undefined : '_blank', rel: 'noopener noreferrer' };
+
+    const hoverClass = {
+      facebook: 'hover:bg-blue-600 hover:text-white',
+      twitter: 'hover:bg-black hover:text-white',
+      whatsapp: 'hover:bg-green-500 hover:text-white',
+      linkedin: 'hover:bg-blue-700 hover:text-white',
+      mail: 'hover:bg-slate-700 hover:text-white',
+      copy: 'hover:bg-teal-600 hover:text-white',
+    }[network];
+
+    return (
+      <Tag
+        {...tagProps}
+        aria-label={`Partager sur ${labels[network]}`}
+        title={`Partager sur ${labels[network]}`}
+        class:list={[
+          'share-btn relative w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-colors',
+          hoverClass,
+          isCopy && 'copy-link-btn',
+        ]}
+      >
+        {network === 'facebook' && (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
+          </svg>
+        )}
+        {network === 'twitter' && (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+          </svg>
+        )}
+        {network === 'whatsapp' && (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+          </svg>
+        )}
+        {network === 'linkedin' && (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+          </svg>
+        )}
+        {network === 'mail' && (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+            <polyline points="22,6 12,13 2,6"/>
+          </svg>
+        )}
+        {network === 'copy' && (
+          <>
+            <svg class="icon-link" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            <svg class="icon-check hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span class="copy-toast absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-slate-900 text-white text-xs rounded opacity-0 pointer-events-none transition-opacity whitespace-nowrap">
+              Lien copié !
+            </span>
+          </>
+        )}
+      </Tag>
+    );
+  })}
+</div>
+
+<script>
+  document.querySelectorAll<HTMLButtonElement>('.copy-link-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const url = btn.dataset.copyLink;
+      if (!url) return;
+      try {
+        await navigator.clipboard.writeText(url);
+        const linkIcon = btn.querySelector<HTMLElement>('.icon-link');
+        const checkIcon = btn.querySelector<HTMLElement>('.icon-check');
+        const toast = btn.querySelector<HTMLElement>('.copy-toast');
+        linkIcon?.classList.add('hidden');
+        checkIcon?.classList.remove('hidden');
+        if (toast) toast.style.opacity = '1';
+        setTimeout(() => {
+          linkIcon?.classList.remove('hidden');
+          checkIcon?.classList.add('hidden');
+          if (toast) toast.style.opacity = '0';
+        }, 1800);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.warn('Clipboard API non disponible', e);
+      }
+    });
+  });
+</script>

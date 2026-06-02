@@ -1,0 +1,77 @@
+---
+/**
+ * Separator — Séparateur décoratif éditorial (vs Divider qui est un `<hr>` simple).
+ *
+ * 3 variantes :
+ *  - `ornament` (défaut) : ligne — losange — ligne
+ *  - `wave` : vaguelette SVG
+ *  - `dots` : 3 points alignés (• ●  •)
+ *
+ * Customisation :
+ *  - `class` : surcharge complète des classes
+ *  - `colorClass` : classe Tailwind pour la couleur du tracé (ex: `text-amber-700`)
+ *  - `dividerColorClass` : classe Tailwind pour la ligne ornement (ex: `bg-stone-300`)
+ *
+ * Par défaut : palette neutre slate.
+ *
+ * Schema catalog équivalent :
+ *   { variant?: 'wave' | 'dots' | 'ornament', class?: string, colorClass?: string }
+ */
+interface Props {
+  variant?: 'wave' | 'dots' | 'ornament';
+  class?: string;
+  /** Classe Tailwind pour la couleur du tracé (svg/dots). Défaut: `text-slate-400`. */
+  colorClass?: string;
+  /** Classe Tailwind pour la ligne dans variant 'ornament'. Défaut: `bg-slate-300`. */
+  dividerColorClass?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  variant = 'ornament',
+  class: className = '',
+  colorClass = 'text-slate-400',
+  dividerColorClass = 'bg-slate-300',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+---
+
+<div
+  class:list={['flex items-center justify-center py-10', className]}
+  aria-hidden="true"
+  data-brick="separator"
+  {...rest}
+>
+  {variant === 'ornament' && (
+    <div class:list={['flex w-full max-w-md items-center gap-4', colorClass]}>
+      <span class:list={['h-px flex-1', dividerColorClass]}></span>
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M10 2 L14 10 L10 18 L6 10 Z" opacity="0.85"/>
+      </svg>
+      <span class:list={['h-px flex-1', dividerColorClass]}></span>
+    </div>
+  )}
+
+  {variant === 'wave' && (
+    <svg width="80" height="14" viewBox="0 0 80 14" class:list={[colorClass]} fill="none">
+      <path
+        d="M2 7 Q12 1 22 7 T42 7 T62 7 T78 7"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        opacity="0.85"
+      />
+    </svg>
+  )}
+
+  {variant === 'dots' && (
+    <div class:list={['flex items-center gap-2', colorClass]}>
+      <span class="h-1.5 w-1.5 rounded-full bg-current opacity-50"></span>
+      <span class="h-2 w-2 rounded-full bg-current"></span>
+      <span class="h-1.5 w-1.5 rounded-full bg-current opacity-50"></span>
+    </div>
+  )}
+</div>

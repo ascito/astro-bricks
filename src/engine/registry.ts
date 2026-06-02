@@ -25,6 +25,7 @@ import Hero from '~/bricks/composites/Hero.astro';
 import Accordion from '~/bricks/composites/Accordion.astro';
 import Alert from '~/bricks/composites/Alert.astro';
 import Breadcrumb from '~/bricks/composites/Breadcrumb.astro';
+import ShareButtons from '~/bricks/composites/ShareButtons.astro';
 
 /**
  * Map id catalog → composant Astro.
@@ -49,4 +50,5 @@ export const BRICK_REGISTRY: Record<string, unknown> = {
   accordion: Accordion,
   alert: Alert,
   breadcrumb: Breadcrumb,
+  'share-buttons': ShareButtons,
 };
