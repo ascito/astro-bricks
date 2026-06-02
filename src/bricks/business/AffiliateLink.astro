@@ -1,0 +1,102 @@
+---
+/**
+ * AffiliateLink — Bouton/lien affilié Amazon avec attributs SEO/légaux conformes.
+ *
+ * Génère un lien :
+ *  - `rel="sponsored nofollow noopener"` (CGU Amazon + Google Search Central)
+ *  - `target="_blank"` (UX standard pour liens externes)
+ *  - `data-asin` + `data-source` (analytics, tracking source de clic)
+ *  - URL construite via `buildAmazonUrl()` si ASIN fourni
+ *  - Sinon URL marque directe (fallback)
+ *
+ * Le tag d'affiliation est passé en prop (depuis siteConfig).
+ *
+ * Usage :
+ * ```astro
+ * <AffiliateLink
+ *   asin={product.asin}
+ *   tag="saunaguide-21"
+ *   source="home_card"
+ *   variant="primary"
+ *   colorClass="bg-amber-700 hover:bg-amber-900 text-white"
+ * />
+ * ```
+ */
+import { buildAmazonUrl } from '../../lib/affiliate';
+import type { AmazonMarketplace } from '../../config/types';
+
+type Variant = 'primary' | 'secondary' | 'inline';
+
+interface Props {
+  /** ASIN Amazon (10 chars). Si absent, utilise `url`. */
+  asin?: string | null;
+  /** URL fallback (lien marque direct) si pas d'ASIN. */
+  url?: string | null;
+  /** Tag d'affiliation Amazon (obligatoire pour le tracking). */
+  tag?: string;
+  /** Marketplace. Défaut: 'fr'. */
+  marketplace?: AmazonMarketplace;
+  /** Préfixe pour le ref_ tracking (ex: 'sg' pour saunaguide). */
+  refPrefix?: string;
+  /** Label affiché. */
+  label?: string;
+  /** Variante stylée. */
+  variant?: Variant;
+  /** Source de clic (pour analytics). */
+  source?: string;
+  /** Override de la couleur principale (variant primary/secondary). */
+  colorClass?: string;
+  /** Classes additionnelles. */
+  class?: string;
+}
+
+const {
+  asin,
+  url,
+  tag,
+  marketplace = 'fr',
+  refPrefix,
+  label = 'Voir le prix',
+  variant = 'primary',
+  source = 'site',
+  colorClass,
+  class: customClass = '',
+} = Astro.props;
+
+const isAmazon = !!asin;
+
+const href = isAmazon
+  ? buildAmazonUrl(asin as string, source, { tag, marketplace, refPrefix })
+  : (url ?? '#');
+
+const finalLabel = isAmazon ? `${label} sur Amazon` : `${label} sur le site marque`;
+
+const baseVariantClasses: Record<Variant, string> = {
+  primary:
+    'inline-flex items-center justify-center gap-2 rounded-md px-5 py-3 text-base font-semibold shadow-sm transition focus-visible:outline focus-visible:outline-2',
+  secondary:
+    'inline-flex items-center justify-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition',
+  inline:
+    'underline underline-offset-2',
+};
+
+const defaultColorClass: Record<Variant, string> = {
+  primary: 'bg-slate-800 text-white hover:bg-slate-900 focus-visible:outline-slate-500',
+  secondary: 'border-slate-300 bg-slate-50 text-slate-700 hover:border-slate-500 hover:text-slate-900',
+  inline: 'text-slate-700 hover:text-slate-900',
+};
+
+const finalColorClass = colorClass ?? defaultColorClass[variant];
+---
+
+<a
+  href={href}
+  rel="sponsored nofollow noopener"
+  target="_blank"
+  data-asin={asin || undefined}
+  data-source={source}
+  data-brick="affiliate-link"
+  class:list={[baseVariantClasses[variant], finalColorClass, customClass]}
+>
+  <slot>{finalLabel}</slot>
+</a>

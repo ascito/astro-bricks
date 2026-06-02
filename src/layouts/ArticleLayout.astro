@@ -1,0 +1,181 @@
+---
+/**
+ * ArticleLayout — Layout pour les articles longs (guides, comparatifs, tests).
+ *
+ * Compose BaseLayout + :
+ *  - Header d'article (h1 + meta + dates)
+ *  - Breadcrumb visuel
+ *  - Wrapper prose pour le Markdown rendu
+ *  - ShareButtons en bas
+ *  - JsonLdArticle automatique
+ *
+ * Slot : le contenu Markdown (`<slot />`).
+ *
+ * Usage typique :
+ * ```astro
+ * ---
+ * import ArticleLayout from 'astro-bricks/layouts/ArticleLayout.astro';
+ * import siteConfig from '~/site.config';
+ * import { render } from 'astro:content';
+ * const guide = await getEntry('guides', Astro.params.slug);
+ * const { Content } = await render(guide);
+ * ---
+ *
+ * <ArticleLayout
+ *   siteConfig={siteConfig}
+ *   article={{
+ *     title: guide.data.h1,
+ *     description: guide.data.meta_description,
+ *     slug: guide.data.slug,
+ *     publishedTime: guide.data.publication.toISOString(),
+ *     modifiedTime: guide.data.mise_a_jour.toISOString(),
+ *     category: 'Guide',
+ *     wordCount: 2800,
+ *   }}
+ *   breadcrumbs={[
+ *     { label: 'Accueil', href: '/' },
+ *     { label: 'Guides', href: '/guides' },
+ *     { label: guide.data.h1 },
+ *   ]}
+ * >
+ *   <Content />
+ * </ArticleLayout>
+ * ```
+ */
+import type { ResolvedSiteConfig } from '../config/types';
+import BaseLayout from './BaseLayout.astro';
+import JsonLdArticle from '../bricks/seo/JsonLdArticle.astro';
+import Breadcrumb from '../bricks/nav/Breadcrumb.astro';
+import ShareButtons from '../bricks/composites/ShareButtons.astro';
+import { formatDate, readingTime } from '../lib/format';
+
+interface ArticleMeta {
+  title: string;
+  description: string;
+  slug: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  category?: string;
+  image?: string | null;
+  wordCount?: number;
+  author?: string;
+}
+
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  siteConfig: ResolvedSiteConfig;
+  article: ArticleMeta;
+  breadcrumbs?: BreadcrumbItem[];
+  /** URL path-prefix de la collection. Ex : `/guide`, `/comparatif`. */
+  collectionPath?: string;
+  /** Path du logo pour le Header. */
+  logoSrc?: string;
+  /** Texte brut pour calculer le temps de lecture si wordCount absent. */
+  rawText?: string;
+}
+
+const {
+  siteConfig,
+  article,
+  breadcrumbs,
+  collectionPath = '/article',
+  logoSrc,
+  rawText,
+} = Astro.props;
+
+const articleUrl = `${collectionPath.replace(/\/$/, '')}/${article.slug}`;
+const fullArticleUrl = `${siteConfig.siteUrl}${articleUrl}`;
+
+const computedReadingTime = article.wordCount
+  ? Math.ceil(article.wordCount / 200)
+  : (rawText ? readingTime(rawText) : null);
+---
+
+<BaseLayout
+  siteConfig={siteConfig}
+  title={article.title}
+  description={article.description}
+  ogType="article"
+  ogImage={article.image ?? undefined}
+  publishedTime={article.publishedTime}
+  modifiedTime={article.modifiedTime}
+  author={article.author ?? siteConfig.brand}
+  breadcrumbs={breadcrumbs}
+  logoSrc={logoSrc}
+>
+  <Fragment slot="head">
+    <JsonLdArticle
+      title={article.title}
+      description={article.description}
+      url={articleUrl}
+      siteUrl={siteConfig.siteUrl}
+      siteName={siteConfig.brand}
+      category={article.category}
+      image={article.image}
+      publishedTime={article.publishedTime}
+      modifiedTime={article.modifiedTime}
+      wordCount={article.wordCount}
+      inLanguage={siteConfig.locale}
+    />
+  </Fragment>
+
+  <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+    {breadcrumbs && breadcrumbs.length > 0 && (
+      <Breadcrumb
+        items={breadcrumbs.map(b => ({ label: b.label, href: b.href }))}
+        siteUrl={siteConfig.siteUrl}
+        withJsonLd={false}
+      />
+    )}
+
+    {/* Header article */}
+    <header class="mt-8 mb-10">
+      {article.category && (
+        <p class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">
+          {article.category}
+        </p>
+      )}
+      <h1 class="font-display text-3xl md:text-5xl font-extrabold text-slate-900 mb-4 leading-tight">
+        {article.title}
+      </h1>
+      <p class="text-lg text-slate-600 leading-relaxed mb-4">{article.description}</p>
+      <div class="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+        {article.publishedTime && (
+          <time datetime={article.publishedTime}>
+            Publié le {formatDate(article.publishedTime)}
+          </time>
+        )}
+        {article.modifiedTime && article.modifiedTime !== article.publishedTime && (
+          <time datetime={article.modifiedTime}>
+            · mis à jour le {formatDate(article.modifiedTime)}
+          </time>
+        )}
+        {computedReadingTime && (
+          <span>· {computedReadingTime} min de lecture</span>
+        )}
+      </div>
+    </header>
+
+    {/* Contenu */}
+    <div class="prose-article">
+      <slot />
+    </div>
+
+    {/* Sidebar / extras optionnels */}
+    <slot name="after-content" />
+
+    {/* Partage */}
+    <aside class="mt-12 border-t border-slate-200 pt-6" aria-label="Partager cette page">
+      <ShareButtons
+        title={article.title}
+        description={article.description}
+        url={fullArticleUrl}
+        siteUrl={siteConfig.siteUrl}
+      />
+    </aside>
+  </article>
+</BaseLayout>

@@ -1,0 +1,106 @@
+---
+/**
+ * JsonLdArticle — Schema.org Article enrichi.
+ *
+ * Couvre :
+ *  - headline (limité 110 chars pour Google)
+ *  - description, image, inLanguage
+ *  - articleSection (Comparatif / Guide / Test / Article)
+ *  - mainEntityOfPage
+ *  - author + publisher (Organization avec logo)
+ *  - datePublished / dateModified
+ *  - wordCount (signal qualité contenu)
+ *
+ * Usage :
+ * ```astro
+ * <JsonLdArticle
+ *   title="Choisir une station météo"
+ *   url="/guide/choisir"
+ *   siteUrl="https://station-meteo-connectee.fr"
+ *   siteName="Station Météo Connectée"
+ *   category="Guide"
+ *   publishedTime="2026-06-01T10:00:00Z"
+ *   wordCount={2800}
+ * />
+ * ```
+ */
+
+interface Props {
+  title: string;
+  description?: string;
+  image?: string | null;
+  /** URL canonique (relative ou absolue). */
+  url: string;
+  /** Catégorie éditoriale. Défaut : 'Article'. */
+  category?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  wordCount?: number;
+  /** URL canonique du site (obligatoire). */
+  siteUrl: string;
+  /** Nom du site (utilisé pour author + publisher). */
+  siteName: string;
+  /** Path vers le logo du site. Défaut : `/favicon.svg`. */
+  logoPath?: string;
+  /** Image OG par défaut si pas d'image. Défaut : `/images/og-default.png`. */
+  defaultOgImage?: string;
+  /** Locale au format BCP-47. Défaut : `'fr-FR'`. */
+  inLanguage?: string;
+}
+
+const {
+  title,
+  description,
+  image,
+  url,
+  category = 'Article',
+  publishedTime,
+  modifiedTime,
+  wordCount,
+  siteUrl,
+  siteName,
+  logoPath = '/favicon.svg',
+  defaultOgImage = '/images/og-default.png',
+  inLanguage = 'fr-FR',
+} = Astro.props;
+
+const fullUrl = url.startsWith('http') ? url : `${siteUrl}${url}`;
+const imageUrl = image
+  ? (image.startsWith('http') ? image : `${siteUrl}${image}`)
+  : `${siteUrl}${defaultOgImage}`;
+
+const articleSchema: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: title.slice(0, 110),
+  description: description || title,
+  image: imageUrl,
+  inLanguage,
+  articleSection: category,
+  url: fullUrl,
+  mainEntityOfPage: {
+    '@type': 'WebPage',
+    '@id': fullUrl,
+  },
+  author: {
+    '@type': 'Organization',
+    name: siteName,
+    url: siteUrl,
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: siteName,
+    url: siteUrl,
+    logo: {
+      '@type': 'ImageObject',
+      url: `${siteUrl}${logoPath}`,
+    },
+  },
+};
+
+if (publishedTime) articleSchema.datePublished = publishedTime;
+if (modifiedTime) articleSchema.dateModified = modifiedTime;
+if (wordCount) articleSchema.wordCount = wordCount;
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(articleSchema)} is:inline></script>

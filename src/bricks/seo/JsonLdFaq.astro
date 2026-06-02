@@ -1,0 +1,47 @@
+---
+/**
+ * JsonLdFaq — Schema.org FAQPage.
+ *
+ * Couple naturellement avec la brique `Faq` (mais peut être utilisé seul).
+ * Les réponses sont strippées de leur HTML avant injection (Google n'accepte
+ * que du texte brut dans acceptedAnswer.text).
+ *
+ * Usage :
+ * ```astro
+ * <JsonLdFaq items={faqItems} />
+ * ```
+ */
+interface FaqItem {
+  question: string;
+  answer: string; // HTML autorisé, sera nettoyé
+}
+
+interface Props {
+  items: FaqItem[];
+}
+
+const { items } = Astro.props;
+
+/** Supprime les balises HTML et normalise les espaces. */
+const stripHtml = (html: string): string =>
+  html
+    .replace(/<\/?(p|br)[^>]*>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const data = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: items.map((item) => ({
+    '@type': 'Question',
+    name: item.question,
+    acceptedAnswer: {
+      '@type': 'Answer',
+      text: stripHtml(item.answer),
+    },
+  })),
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(data)} is:inline></script>

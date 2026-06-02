@@ -1,0 +1,133 @@
+---
+/**
+ * JsonLdProduct — Schema.org Product complet pour fiches produit.
+ *
+ * Couvre :
+ *  - Identité : name, description, image, brand, sku, mpn, category, url
+ *  - Notes : aggregateRating (rating + reviewCount)
+ *  - Offre : price, priceCurrency, priceValidUntil, availability, seller
+ *  - Amazon affiliate : hasMerchantReturnPolicy + shippingDetails (Amazon.fr standard)
+ *
+ * Si `product.asin` est présent, le seller est Amazon et la politique de retour
+ * + livraison Prime sont injectées automatiquement.
+ *
+ * Usage :
+ * ```astro
+ * <JsonLdProduct
+ *   product={product}
+ *   siteUrl="https://saunaguide.fr"
+ *   urlPath="/avis"
+ *   defaultCategory="sauna"
+ * />
+ * ```
+ */
+import {
+  AMAZON_FR_RETURN_POLICY,
+  AMAZON_FR_SHIPPING_DETAILS,
+} from '../../lib/affiliate';
+import { priceValidUntil as defaultPriceValidUntil } from '../../lib/format';
+
+interface Product {
+  slug: string;
+  name: string;
+  brand?: string;
+  asin?: string | null;
+  amazon_url?: string | null;
+  image?: string | null;
+  price?: string | number | null;
+  currency?: string | null;
+  rating?: string | number | null;
+  review_count?: number | null;
+  category?: string | null;
+  verdict?: string | null;
+  pros?: string[];
+}
+
+interface Props {
+  product: Product;
+  /** URL canonique du site (obligatoire). Ex: `'https://saunaguide.fr'`. */
+  siteUrl: string;
+  /** Path de la page produit. Défaut: `'/produit'`. Ex: `'/avis'`, `'/p'`. */
+  urlPath?: string;
+  /** Catégorie Schema.org par défaut si `product.category` absent. Défaut: `'product'`. */
+  defaultCategory?: string;
+  /** Nom du vendeur fallback si pas d'ASIN (vente directe). Défaut: nom du site. */
+  sellerFallback?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+}
+
+const {
+  product,
+  siteUrl,
+  urlPath = '/produit',
+  defaultCategory = 'product',
+  sellerFallback,
+  publishedTime,
+  modifiedTime,
+} = Astro.props;
+
+const cleanPath = urlPath.replace(/\/$/, '');
+const fullUrl = `${siteUrl}${cleanPath}/${product.slug}`;
+const imageUrl = product.image
+  ? (product.image.startsWith('http') ? product.image : `${siteUrl}${product.image}`)
+  : undefined;
+
+const priceValidUntilStr = defaultPriceValidUntil(12);
+
+// Description riche (verdict + 3 pros)
+const description = [
+  product.verdict,
+  product.pros && product.pros.length > 0 && `Points forts : ${product.pros.slice(0, 3).join(', ')}.`,
+].filter(Boolean).join(' ') || product.name;
+
+const productSchema: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'Product',
+  name: product.name,
+  description,
+  image: imageUrl,
+  brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+  sku: product.asin || product.slug,
+  mpn: product.asin || product.slug,
+  category: product.category || defaultCategory,
+  url: fullUrl,
+};
+
+if (product.rating && product.review_count) {
+  productSchema.aggregateRating = {
+    '@type': 'AggregateRating',
+    ratingValue: String(product.rating),
+    reviewCount: product.review_count,
+    bestRating: '5',
+    worstRating: '1',
+  };
+}
+
+if (product.price) {
+  const offer: Record<string, unknown> = {
+    '@type': 'Offer',
+    price: String(product.price),
+    priceCurrency: product.currency || 'EUR',
+    priceValidUntil: priceValidUntilStr,
+    availability: 'https://schema.org/InStock',
+    url: product.amazon_url || fullUrl,
+    seller: {
+      '@type': 'Organization',
+      name: product.asin
+        ? 'Amazon.fr'
+        : (product.brand || sellerFallback || 'Direct'),
+    },
+  };
+  if (product.asin) {
+    offer.hasMerchantReturnPolicy = AMAZON_FR_RETURN_POLICY;
+    offer.shippingDetails = AMAZON_FR_SHIPPING_DETAILS;
+  }
+  productSchema.offers = offer;
+}
+
+if (publishedTime) productSchema.datePublished = publishedTime;
+if (modifiedTime) productSchema.dateModified = modifiedTime;
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(productSchema)} is:inline></script>

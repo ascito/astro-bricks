@@ -1,0 +1,211 @@
+---
+/**
+ * ProduitCard — Carte produit avec image, marque, titre, note, prix, verdict, 2 CTAs.
+ *
+ * Optimisations LCP : prop `priority` active eager + fetchpriority=high + sync.
+ * À appliquer aux 3 premières cartes above-the-fold.
+ *
+ * Le composant est agnostique du format produit : passe-lui un objet conforme à
+ * `Product` (sous-ensemble du schema v3). L'URL Amazon et l'URL du détail sont
+ * passées en props (pour éviter de coupler à un schema d'URL particulier).
+ *
+ * Usage :
+ * ```astro
+ * <ProduitCard
+ *   product={product}
+ *   detailUrl={`/avis/${product.slug}`}
+ *   amazonUrl={buildAmazonUrl(product.asin, 'home_card', { tag: 'saunaguide-21' })}
+ *   palette={{
+ *     accentText: 'text-amber-700',
+ *     priceText: 'text-amber-800',
+ *     ctaBg: 'bg-amber-800',
+ *     ctaHoverBg: 'hover:bg-amber-900',
+ *     rankBg: 'bg-amber-700',
+ *   }}
+ *   priority={index < 3}
+ * />
+ * ```
+ */
+import { formatPrice } from '../../lib/format';
+
+interface ProductSummary {
+  slug: string;
+  name: string;
+  brand?: string | null;
+  image?: string | null;
+  rating?: string | number | null;
+  review_count?: number | null;
+  price?: string | number | null;
+  currency?: string | null;
+  verdict?: string | null;
+}
+
+interface CardPalette {
+  /** Couleur du nom de marque (top de la card). Défaut: `text-slate-700`. */
+  accentText?: string;
+  /** Couleur du prix. Défaut: `text-slate-900`. */
+  priceText?: string;
+  /** Background du CTA principal (Amazon). Défaut: `bg-slate-800`. */
+  ctaBg?: string;
+  /** Hover background du CTA principal. Défaut: `hover:bg-slate-900`. */
+  ctaHoverBg?: string;
+  /** Background du badge rank. Défaut: `bg-slate-800`. */
+  rankBg?: string;
+  /** Couleur hover du titre. Défaut: `hover:text-slate-700`. */
+  titleHover?: string;
+}
+
+interface Props {
+  product: ProductSummary;
+  /** URL absolue du détail produit (ex: `/avis/mon-produit`). */
+  detailUrl: string;
+  /** URL absolue Amazon (avec tag affilié déjà appliqué). */
+  amazonUrl?: string | null;
+  /** Numéro de classement (badge en haut à gauche). */
+  rank?: number;
+  /** Affiche le verdict éditorial sous la note. */
+  showVerdict?: boolean;
+  /** Above-the-fold ? Active eager loading. */
+  priority?: boolean;
+  /** Palette de couleurs. */
+  palette?: CardPalette;
+  /** Texte du bouton secondaire. Défaut: 'Voir le test'. */
+  detailLabel?: string;
+  /** Texte du bouton principal. Défaut: 'Voir sur Amazon'. */
+  amazonLabel?: string;
+  /** Emoji fallback si pas d'image. Défaut: 🛍. */
+  emojiFallback?: string;
+  /** Classes additionnelles. */
+  class?: string;
+}
+
+const {
+  product,
+  detailUrl,
+  amazonUrl,
+  rank,
+  showVerdict = true,
+  priority = false,
+  palette = {},
+  detailLabel = 'Voir le test',
+  amazonLabel = 'Voir sur Amazon',
+  emojiFallback = '🛍',
+  class: customClass = '',
+} = Astro.props;
+
+const {
+  accentText = 'text-slate-700',
+  priceText = 'text-slate-900',
+  ctaBg = 'bg-slate-800',
+  ctaHoverBg = 'hover:bg-slate-900',
+  rankBg = 'bg-slate-800',
+  titleHover = 'hover:text-slate-700',
+} = palette;
+---
+
+<article
+  data-brick="produit-card"
+  class:list={[
+    'bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow group',
+    customClass,
+  ]}
+>
+  <a href={detailUrl} class="block relative">
+    {rank && (
+      <span class:list={['absolute top-3 left-3 z-10 text-white font-display font-bold text-sm px-2.5 py-1 rounded-md shadow-md', rankBg]}>
+        #{rank}
+      </span>
+    )}
+    {product.image ? (
+      <div class="aspect-square bg-slate-50 flex items-center justify-center p-4 overflow-hidden">
+        <img
+          src={product.image}
+          alt={product.name}
+          class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+          loading={priority ? 'eager' : 'lazy'}
+          fetchpriority={priority ? 'high' : 'auto'}
+          decoding={priority ? 'sync' : 'async'}
+          width="400"
+          height="400"
+        />
+      </div>
+    ) : (
+      <div class="aspect-square bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <span class="text-slate-300 text-6xl">{emojiFallback}</span>
+      </div>
+    )}
+  </a>
+
+  <div class="p-5">
+    {product.brand && (
+      <p class:list={['text-xs font-semibold uppercase tracking-wider mb-1', accentText]}>
+        {product.brand}
+      </p>
+    )}
+    <h3 class="font-display font-bold text-lg text-slate-900 mb-2 leading-tight">
+      <a href={detailUrl} class:list={[titleHover]}>{product.name}</a>
+    </h3>
+
+    {/* Rating */}
+    {product.rating != null && (
+      <div class="flex items-center gap-1.5 text-sm mb-3">
+        <div class="flex">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <svg
+              width="14" height="14" viewBox="0 0 24 24"
+              fill={parseFloat(String(product.rating)) >= star ? '#fbbf24' : 'none'}
+              stroke="#fbbf24" stroke-width="1.5"
+              aria-hidden="true"
+            >
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          ))}
+        </div>
+        <span class="text-slate-700 font-medium">{product.rating}</span>
+        {product.review_count && (
+          <span class="text-slate-500 text-xs">({product.review_count.toLocaleString('fr-FR')})</span>
+        )}
+      </div>
+    )}
+
+    {/* Price */}
+    {product.price != null && (
+      <div class="mb-3">
+        <span class:list={['text-2xl font-display font-extrabold', priceText]}>
+          {formatPrice(product.price, { currency: product.currency || 'EUR' })}
+        </span>
+      </div>
+    )}
+
+    {/* Verdict court */}
+    {showVerdict && product.verdict && (
+      <p class="text-sm text-slate-600 leading-relaxed mb-4 line-clamp-3">
+        {product.verdict}
+      </p>
+    )}
+
+    {/* CTAs */}
+    <div class="flex flex-col sm:flex-row gap-2">
+      <a
+        href={detailUrl}
+        class="flex-1 text-center bg-slate-100 hover:bg-slate-200 text-slate-800 text-sm font-semibold px-4 py-2 rounded-lg transition-colors"
+      >
+        {detailLabel}
+      </a>
+      {amazonUrl && (
+        <a
+          href={amazonUrl}
+          target="_blank"
+          rel="sponsored nofollow noopener"
+          class:list={[
+            'flex-1 text-center text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors',
+            ctaBg,
+            ctaHoverBg,
+          ]}
+        >
+          {amazonLabel}
+        </a>
+      )}
+    </div>
+  </div>
+</article>

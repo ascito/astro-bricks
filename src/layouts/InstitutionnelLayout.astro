@@ -1,0 +1,90 @@
+---
+/**
+ * InstitutionnelLayout — Layout pour les pages institutionnelles (Markdown).
+ *
+ * Couvre : mentions-legales, politique-cookies, politique-confidentialite,
+ * a-propos, accessibilite, contact, lexique, etc.
+ *
+ * Compose BaseLayout + Breadcrumb visuel + wrapper prose.
+ *
+ * Auto-noindex si frontmatter.noindex=true. Affiche la date de mise à jour
+ * en bas de page (champ frontmatter `mise_a_jour`).
+ *
+ * Usage typique (dans `src/pages/mentions-legales.astro`) :
+ * ```astro
+ * ---
+ * import InstitutionnelLayout from 'astro-bricks/layouts/InstitutionnelLayout.astro';
+ * import siteConfig from '~/site.config';
+ * import { getEntry, render } from 'astro:content';
+ * const page = await getEntry('institutionnel', 'mentions-legales');
+ * const { Content } = await render(page);
+ * ---
+ *
+ * <InstitutionnelLayout siteConfig={siteConfig} page={page.data}>
+ *   <Content />
+ * </InstitutionnelLayout>
+ * ```
+ */
+import type { ResolvedSiteConfig } from '../config/types';
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumb from '../bricks/nav/Breadcrumb.astro';
+import { formatDate } from '../lib/format';
+
+interface InstitutionnelPage {
+  url: string;
+  title_seo: string;
+  meta_description: string;
+  h1: string;
+  noindex?: boolean;
+  mise_a_jour: Date | string;
+}
+
+interface Props {
+  siteConfig: ResolvedSiteConfig;
+  page: InstitutionnelPage;
+  /** Path du logo pour le Header. */
+  logoSrc?: string;
+}
+
+const { siteConfig, page, logoSrc } = Astro.props;
+
+const breadcrumbs = [
+  { label: 'Accueil', href: '/' },
+  { label: page.h1 },
+];
+
+const updateDate = page.mise_a_jour instanceof Date
+  ? page.mise_a_jour
+  : new Date(page.mise_a_jour);
+---
+
+<BaseLayout
+  siteConfig={siteConfig}
+  title={page.title_seo}
+  description={page.meta_description}
+  noindex={page.noindex ?? false}
+  breadcrumbs={breadcrumbs}
+  logoSrc={logoSrc}
+>
+  <article class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+    <Breadcrumb
+      items={breadcrumbs.map(b => ({ label: b.label, href: b.href }))}
+      siteUrl={siteConfig.siteUrl}
+      withJsonLd={false}
+    />
+
+    <header class="mt-8 mb-10">
+      <h1 class="font-display text-3xl md:text-4xl font-extrabold text-slate-900 mb-3">
+        {page.h1}
+      </h1>
+    </header>
+
+    <div class="prose-institutionnel">
+      <slot />
+    </div>
+
+    <p class="text-sm text-slate-500 mt-12 pt-6 border-t border-slate-200">
+      Dernière mise à jour : <time datetime={updateDate.toISOString()}>{formatDate(updateDate)}</time>
+    </p>
+  </article>
+</BaseLayout>

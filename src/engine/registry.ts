@@ -26,6 +26,31 @@ import Accordion from '~/bricks/composites/Accordion.astro';
 import Alert from '~/bricks/composites/Alert.astro';
 import Breadcrumb from '~/bricks/composites/Breadcrumb.astro';
 import ShareButtons from '~/bricks/composites/ShareButtons.astro';
+import Separator from '~/bricks/composites/Separator.astro';
+import SectionHeader from '~/bricks/composites/SectionHeader.astro';
+
+// ─── Business ───
+import BackToTop from '~/bricks/business/BackToTop.astro';
+import Disclosure from '~/bricks/business/Disclosure.astro';
+import Faq from '~/bricks/business/Faq.astro';
+import AffiliateLink from '~/bricks/business/AffiliateLink.astro';
+import ProduitCard from '~/bricks/business/ProduitCard.astro';
+import ArticleCard from '~/bricks/business/ArticleCard.astro';
+
+// ─── Nav ───
+import HeaderNav from '~/bricks/nav/Header.astro';
+import FooterNav from '~/bricks/nav/Footer.astro';
+import BreadcrumbNav from '~/bricks/nav/Breadcrumb.astro';
+
+// ─── SEO (injectent du JSON-LD, pas de rendu visuel) ───
+import SeoHead from '~/bricks/seo/SeoHead.astro';
+import JsonLdArticle from '~/bricks/seo/JsonLdArticle.astro';
+import JsonLdProduct from '~/bricks/seo/JsonLdProduct.astro';
+import JsonLdBrand from '~/bricks/seo/JsonLdBrand.astro';
+import JsonLdItemList from '~/bricks/seo/JsonLdItemList.astro';
+import JsonLdBreadcrumb from '~/bricks/seo/JsonLdBreadcrumb.astro';
+import JsonLdFaq from '~/bricks/seo/JsonLdFaq.astro';
+import JsonLdOrganization from '~/bricks/seo/JsonLdOrganization.astro';
 
 /**
  * Map id catalog → composant Astro.
@@ -51,4 +76,29 @@ export const BRICK_REGISTRY: Record<string, unknown> = {
   alert: Alert,
   breadcrumb: Breadcrumb,
   'share-buttons': ShareButtons,
+  separator: Separator,
+  'section-header': SectionHeader,
+
+  // Business
+  'back-to-top': BackToTop,
+  disclosure: Disclosure,
+  faq: Faq,
+  'affiliate-link': AffiliateLink,
+  'produit-card': ProduitCard,
+  'article-card': ArticleCard,
+
+  // Nav (business-aware, à utiliser dans BaseLayout)
+  'header-nav': HeaderNav,
+  'footer-nav': FooterNav,
+  'breadcrumb-nav': BreadcrumbNav,
+
+  // SEO
+  'seo-head': SeoHead,
+  'json-ld-article': JsonLdArticle,
+  'json-ld-product': JsonLdProduct,
+  'json-ld-brand': JsonLdBrand,
+  'json-ld-item-list': JsonLdItemList,
+  'json-ld-breadcrumb': JsonLdBreadcrumb,
+  'json-ld-faq': JsonLdFaq,
+  'json-ld-organization': JsonLdOrganization,
 };

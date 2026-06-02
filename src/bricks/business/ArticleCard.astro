@@ -1,0 +1,131 @@
+---
+/**
+ * ArticleCard — Carte article (guide, comparatif, test, top) avec image hero 16:9.
+ *
+ * Optimisations LCP : prop `priority` active eager + fetchpriority=high + sync.
+ *
+ * Usage :
+ * ```astro
+ * <ArticleCard
+ *   article={article}
+ *   url={`/guide/${article.slug}`}
+ *   palette={{ titleHover: 'hover:text-amber-800' }}
+ *   priority={index < 3}
+ * />
+ * ```
+ */
+import { formatDate } from '../../lib/format';
+
+interface ArticleSummary {
+  slug: string;
+  title: string;
+  description?: string;
+  image?: string | null;
+  category?: string;
+  published_at?: string | null;
+}
+
+interface ArticleCardPalette {
+  /** Couleur du hover du titre. Défaut: `hover:text-slate-700`. */
+  titleHover?: string;
+  /** Map catégorie → classes du badge. Override le défaut. */
+  categoryColors?: Record<string, string>;
+}
+
+interface Props {
+  article: ArticleSummary;
+  /** URL absolue de l'article. */
+  url: string;
+  /** Above-the-fold ? Active eager loading. */
+  priority?: boolean;
+  palette?: ArticleCardPalette;
+  /** Emoji fallback si pas d'image. Défaut: 📋. */
+  emojiFallback?: string;
+  /** Classes additionnelles. */
+  class?: string;
+}
+
+const DEFAULT_CATEGORY_COLORS: Record<string, string> = {
+  comparatif: 'bg-slate-100 text-slate-800',
+  guide: 'bg-slate-100 text-slate-700',
+  article: 'bg-slate-100 text-slate-700',
+  test: 'bg-purple-100 text-purple-800',
+  top: 'bg-orange-100 text-orange-800',
+};
+
+const {
+  article,
+  url,
+  priority = false,
+  palette = {},
+  emojiFallback = '📋',
+  class: customClass = '',
+} = Astro.props;
+
+const {
+  titleHover = 'hover:text-slate-700',
+  categoryColors = DEFAULT_CATEGORY_COLORS,
+} = palette;
+
+const categoryClass = article.category
+  ? (categoryColors[article.category] ?? 'bg-slate-100 text-slate-700')
+  : 'bg-slate-100 text-slate-700';
+
+const dateFormatted = article.published_at
+  ? formatDate(article.published_at)
+  : null;
+---
+
+<article
+  data-brick="article-card"
+  class:list={[
+    'bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-lg transition-shadow group',
+    customClass,
+  ]}
+>
+  <a href={url} class="block">
+    {article.image ? (
+      <div class="aspect-[16/9] bg-slate-100 overflow-hidden">
+        <img
+          src={article.image}
+          alt={article.title}
+          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading={priority ? 'eager' : 'lazy'}
+          fetchpriority={priority ? 'high' : 'auto'}
+          decoding={priority ? 'sync' : 'async'}
+          width="600"
+          height="338"
+        />
+      </div>
+    ) : (
+      <div class="aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <span class="text-slate-300 text-5xl">{emojiFallback}</span>
+      </div>
+    )}
+  </a>
+
+  <div class="p-5">
+    <div class="flex items-center gap-3 mb-3">
+      {article.category && (
+        <span class:list={['inline-block px-2 py-1 text-xs font-semibold rounded uppercase tracking-wider', categoryClass]}>
+          {article.category}
+        </span>
+      )}
+      {dateFormatted && (
+        <time class="text-xs text-slate-500" datetime={article.published_at || undefined}>
+          {dateFormatted}
+        </time>
+      )}
+    </div>
+
+    <h3 class="font-display font-bold text-lg text-slate-900 mb-2 leading-tight">
+      <a href={url} class:list={[titleHover]}>{article.title}</a>
+    </h3>
+
+    {article.description && (
+      <p class="text-sm text-slate-600 leading-relaxed line-clamp-3">
+        {article.description}
+      </p>
+    )}
+  </div>
+</article>

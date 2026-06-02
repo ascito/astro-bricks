@@ -1,0 +1,85 @@
+---
+/**
+ * Breadcrumb (nav/business) — Fil d'ariane avec JSON-LD intégré optionnel.
+ *
+ * À distinguer du composite `Breadcrumb` (dans bricks/composites/) qui est plus
+ * générique. Cette version est dédiée aux sites Factory et inclut :
+ *  - Le rendu visuel sémantique (nav > ol > li avec aria-current)
+ *  - Le JSON-LD BreadcrumbList automatique (peut être désactivé via `withJsonLd={false}`)
+ *
+ * Usage :
+ * ```astro
+ * <Breadcrumb
+ *   items={[
+ *     { label: 'Accueil', href: '/' },
+ *     { label: 'Guides', href: '/guides' },
+ *     { label: 'Choisir un sauna' }, // dernier item = page courante, sans href
+ *   ]}
+ *   siteUrl="https://saunaguide.fr"
+ *   hoverClass="hover:text-amber-800"
+ * />
+ * ```
+ */
+interface Crumb {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  items: Crumb[];
+  /** URL canonique du site (obligatoire si `withJsonLd=true`). */
+  siteUrl?: string;
+  /** Active l'injection du JSON-LD BreadcrumbList. Défaut: true. */
+  withJsonLd?: boolean;
+  /** Classe Tailwind pour le hover des liens. Défaut: `hover:text-slate-900`. */
+  hoverClass?: string;
+  /** Classes wrapper additionnelles. */
+  class?: string;
+}
+
+const {
+  items,
+  siteUrl,
+  withJsonLd = true,
+  hoverClass = 'hover:text-slate-900 hover:underline',
+  class: customClass = 'text-sm',
+} = Astro.props;
+
+const jsonLd = (withJsonLd && siteUrl) ? {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map((item, idx) => ({
+    '@type': 'ListItem',
+    position: idx + 1,
+    name: item.label,
+    ...(item.href
+      ? { item: item.href.startsWith('http') ? item.href : `${siteUrl}${item.href}` }
+      : {}),
+  })),
+} : null;
+---
+
+<nav
+  data-brick="breadcrumb-nav"
+  aria-label="Fil d'Ariane"
+  class:list={[customClass]}
+>
+  <ol class="flex flex-wrap items-center gap-1.5 text-slate-600">
+    {items.map((item, idx) => (
+      <li class="flex items-center gap-1.5">
+        {idx > 0 && (
+          <span class="text-slate-400" aria-hidden="true">/</span>
+        )}
+        {item.href && idx < items.length - 1 ? (
+          <a href={item.href} class:list={[hoverClass]}>{item.label}</a>
+        ) : (
+          <span class="text-slate-900 font-medium" aria-current="page">{item.label}</span>
+        )}
+      </li>
+    ))}
+  </ol>
+</nav>
+
+{jsonLd && (
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} is:inline></script>
+)}

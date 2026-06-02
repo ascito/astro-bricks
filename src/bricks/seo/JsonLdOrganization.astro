@@ -1,0 +1,99 @@
+---
+/**
+ * JsonLdOrganization — Bloc d'identité du site (Organization + WebSite).
+ *
+ * Combine en un seul `@graph` Schema.org :
+ *  - `WebSite` (nom du site, URL, description, langue, action de recherche optionnelle)
+ *  - `Organization` (éditeur du site, logo, contact, sameAs réseaux sociaux)
+ *
+ * À injecter une seule fois dans `BaseLayout` (idéalement en début de `<head>`).
+ *
+ * Usage :
+ * ```astro
+ * <JsonLdOrganization
+ *   siteUrl="https://saunaguide.fr"
+ *   siteName="Saunaguide"
+ *   description="Tests, comparatifs et guides d'achat saunas."
+ *   contactEmail="contact@saunaguide.fr"
+ *   sameAs={['https://mastodon.fr/@saunaguide']}
+ * />
+ * ```
+ */
+interface Props {
+  /** URL canonique du site (obligatoire). */
+  siteUrl: string;
+  /** Nom de marque (obligatoire). */
+  siteName: string;
+  /** Description courte du site. */
+  description?: string;
+  /** Email de contact public. */
+  contactEmail?: string;
+  /** Type de contact. Défaut : 'customer service'. */
+  contactType?: string;
+  /** Path du logo. Défaut : `/favicon.svg`. */
+  logoPath?: string;
+  /** Locale BCP-47. Défaut : `'fr-FR'`. */
+  inLanguage?: string;
+  /** Liste d'URLs sameAs (réseaux sociaux, profils officiels). */
+  sameAs?: string[];
+  /** Si fourni, ajoute une SearchAction (potentiel sitelinks searchbox). */
+  searchUrlTemplate?: string;
+}
+
+const {
+  siteUrl,
+  siteName,
+  description,
+  contactEmail,
+  contactType = 'customer service',
+  logoPath = '/favicon.svg',
+  inLanguage = 'fr-FR',
+  sameAs = [],
+  searchUrlTemplate,
+} = Astro.props;
+
+const website: Record<string, unknown> = {
+  '@type': 'WebSite',
+  name: siteName,
+  url: siteUrl,
+  inLanguage,
+};
+if (description) website.description = description;
+
+if (searchUrlTemplate) {
+  website.potentialAction = {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: searchUrlTemplate,
+    },
+    'query-input': 'required name=search_term_string',
+  };
+}
+
+const organization: Record<string, unknown> = {
+  '@type': 'Organization',
+  name: siteName,
+  url: siteUrl,
+  logo: `${siteUrl}${logoPath}`,
+};
+
+if (contactEmail) {
+  organization.contactPoint = {
+    '@type': 'ContactPoint',
+    email: contactEmail,
+    contactType,
+  };
+}
+
+if (sameAs.length > 0) {
+  organization.sameAs = sameAs;
+}
+
+const graph = {
+  '@context': 'https://schema.org',
+  '@graph': [website, organization],
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(graph)} is:inline></script>
