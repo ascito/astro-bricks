@@ -1,0 +1,68 @@
+---
+/**
+ * pros-cons-grid — Grille 2 colonnes ✓ Pros / ✗ Cons
+ * Schema : title?, prosTitle?, consTitle?, pros[], cons[]
+ *
+ * Icônes SVG inline (pas de dépendance), gap propre, items en flex.
+ */
+interface Props {
+  title?: string;
+  prosTitle?: string;
+  consTitle?: string;
+  pros?: string[];
+  cons?: string[];
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title,
+  prosTitle = 'Ce qu\'on aime',
+  consTitle = 'À savoir avant d\'acheter',
+  pros = [],
+  cons = [],
+} = Astro.props;
+---
+<section>
+  {title && <h2 class="font-sans text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 mb-4" set:html={title} />}
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6">
+      <h3 class="font-sans text-xl font-extrabold tracking-tight text-emerald-900 mb-4 flex items-center gap-2">
+        <svg width="20" height="20" viewBox="0 0 20 20" class="text-emerald-600 flex-shrink-0" aria-hidden="true">
+          <circle cx="10" cy="10" r="9" fill="currentColor" opacity="0.15" />
+          <path d="M14.7 6.3a1 1 0 010 1.4l-5.3 5.3a1 1 0 01-1.4 0L5.3 10.3a1 1 0 011.4-1.4L8.7 11l4.6-4.6a1 1 0 011.4 0z" fill="currentColor" />
+        </svg>
+        <span>{prosTitle}</span>
+      </h3>
+      <ul class="text-slate-700 space-y-2.5 text-sm list-none">
+        {pros.map((p) => (
+          <li class="flex gap-2.5 items-start">
+            <svg width="14" height="14" viewBox="0 0 20 20" class="text-emerald-600 flex-shrink-0 mt-1" aria-hidden="true">
+              <path d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 011.4-1.4L9 11.6l6.3-6.3a1 1 0 011.4 0z" fill="currentColor"/>
+            </svg>
+            <span set:html={p} />
+          </li>
+        ))}
+      </ul>
+    </div>
+    <div class="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+      <h3 class="font-sans text-xl font-extrabold tracking-tight text-amber-900 mb-4 flex items-center gap-2">
+        <svg width="20" height="20" viewBox="0 0 20 20" class="text-amber-600 flex-shrink-0" aria-hidden="true">
+          <circle cx="10" cy="10" r="9" fill="currentColor" opacity="0.15" />
+          <path d="M10 4a1 1 0 011 1v5a1 1 0 11-2 0V5a1 1 0 011-1zm0 11a1.25 1.25 0 100-2.5 1.25 1.25 0 000 2.5z" fill="currentColor" />
+        </svg>
+        <span>{consTitle}</span>
+      </h3>
+      <ul class="text-slate-700 space-y-2.5 text-sm list-none">
+        {cons.map((c) => (
+          <li class="flex gap-2.5 items-start">
+            <svg width="14" height="14" viewBox="0 0 20 20" class="text-amber-600 flex-shrink-0 mt-1" aria-hidden="true">
+              <path d="M10 2a1 1 0 01.87.5l8 14A1 1 0 0118 18H2a1 1 0 01-.87-1.5l8-14A1 1 0 0110 2zm0 5a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1zm0 8a1 1 0 100-2 1 1 0 000 2z" fill="currentColor"/>
+            </svg>
+            <span set:html={c} />
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+</section>

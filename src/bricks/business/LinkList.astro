@@ -1,0 +1,49 @@
+---
+/**
+ * link-list — Liste à puces de liens (À lire ensuite, ressources…)
+ * Schema : title?, items[]{label, href, description?, external?}, icon (arrow|bullet|none)
+ */
+interface LinkItem {
+  label: string;
+  href: string;
+  description?: string;
+  external?: boolean;
+}
+interface Props {
+  title?: string;
+  items: LinkItem[];
+  icon?: 'arrow' | 'bullet' | 'none';
+  variant?: 'default' | 'compact' | 'bordered';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { title, items, icon = 'arrow', variant = 'default' } = Astro.props;
+
+const itemPrefix = { arrow: '→ ', bullet: '• ', none: '' }[icon];
+
+const wrap = {
+  default: 'space-y-2',
+  compact: 'space-y-1',
+  bordered: 'space-y-2 border border-slate-200 rounded-2xl p-6',
+}[variant];
+---
+<section>
+  {title && <h2 class="font-sans text-xl font-extrabold tracking-tight text-slate-900 mb-4" set:html={title} />}
+  <ul class={`${wrap} text-slate-700`}>
+    {items.map((item) => (
+      <li>
+        <span class="text-indigo-700">{itemPrefix}</span>
+        <a
+          href={item.href}
+          class="text-indigo-700 hover:text-indigo-900 underline"
+          target={item.external ? '_blank' : undefined}
+          rel={item.external ? 'noopener' : undefined}
+        >
+          <span set:html={item.label} />
+        </a>
+        {item.description && <span class="text-slate-600 text-sm"> — {item.description}</span>}
+      </li>
+    ))}
+  </ul>
+</section>

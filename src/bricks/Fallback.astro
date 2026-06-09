@@ -1,0 +1,23 @@
+---
+/**
+ * Fallback affiché en dev quand une brique n'est pas dans le registry.
+ * Permet de voir visuellement ce qui manque.
+ */
+interface Props {
+  _brickId?: string;
+  _brickType?: string;
+}
+const { _brickId, _brickType } = Astro.props;
+---
+
+<div
+  data-brick-fallback
+  class="my-2 rounded border border-dashed border-amber-400 bg-amber-50 p-3 text-sm text-amber-900"
+>
+  <strong>⚠️ Brique non implémentée :</strong>
+  <code class="font-mono">{_brickType ?? '?'}</code>
+  {_brickId && <span class="ml-2 text-xs opacity-70">(id: {_brickId})</span>}
+  <div class="mt-1 text-xs opacity-80">
+    Ajoute-la dans <code>src/engine/registry.ts</code>.
+  </div>
+</div>

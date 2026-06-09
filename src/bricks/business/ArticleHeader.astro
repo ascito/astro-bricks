@@ -1,0 +1,44 @@
+---
+/**
+ * article-header — En-tête éditorial d'une page review/guide
+ * Schema : eyebrow?, title (req), lead?, level=1, leadAsHtml=true
+ *
+ * Variante de section-header dédiée aux pages éditoriales : le lead supporte
+ * du HTML inline (<strong>, <em>, <a>) car les premières lignes d'un avis
+ * produit comportent souvent des emphases.
+ */
+interface Props {
+  eyebrow?: string;
+  title: string;
+  lead?: string;
+  level?: 1 | 2 | 3;
+  align?: 'left' | 'center';
+  leadAsHtml?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  lead,
+  level = 1,
+  align = 'left',
+  leadAsHtml = true,
+} = Astro.props;
+
+const HeadingTag = `h${level}` as 'h1' | 'h2' | 'h3';
+---
+<header class:list={[align === 'center' && 'text-center']}>
+  {eyebrow && (
+    <p class="text-sm text-indigo-700 font-semibold uppercase tracking-wider mb-3" set:html={eyebrow} />
+  )}
+  <HeadingTag class="font-display text-4xl md:text-5xl font-extrabold text-slate-900 mb-4 leading-tight">
+    {title}
+  </HeadingTag>
+  {lead && (
+    leadAsHtml
+      ? <p class="text-lg text-slate-700 leading-relaxed" set:html={lead} />
+      : <p class="text-lg text-slate-700 leading-relaxed">{lead}</p>
+  )}
+</header>

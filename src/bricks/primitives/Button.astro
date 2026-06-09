@@ -1,0 +1,55 @@
+---
+/**
+ * button — Bouton ou lien stylisé bouton
+ * Schema catalog : { label, variant?, size?, disabled?, href?, type?, fullWidth?, icon? }
+ */
+interface Props {
+  label: string;
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+  disabled?: boolean;
+  href?: string;
+  type?: 'button' | 'submit' | 'reset';
+  fullWidth?: boolean;
+  target?: '_blank' | '_self';
+  rel?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  label, variant = 'primary', size = 'md', disabled = false,
+  href, type = 'button', fullWidth = false, target, rel,
+  _brickId, _brickType, ...rest
+} = Astro.props;
+
+const base = 'inline-flex items-center justify-center gap-2 rounded-md font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2';
+
+const variantClass = {
+  primary:   'bg-blue-600 text-white hover:bg-blue-700',
+  secondary: 'bg-gray-200 text-gray-900 hover:bg-gray-300',
+  outline:   'border border-gray-300 bg-white text-gray-900 hover:bg-gray-50',
+  ghost:     'bg-transparent text-gray-900 hover:bg-gray-100',
+  danger:    'bg-red-600 text-white hover:bg-red-700',
+}[variant];
+
+const sizeClass = {
+  sm: 'px-3 py-1.5 text-sm',
+  md: 'px-4 py-2 text-base',
+  lg: 'px-5 py-3 text-base',
+}[size];
+
+const widthClass = fullWidth ? 'w-full' : '';
+const disabledClass = disabled ? 'cursor-not-allowed opacity-50' : '';
+const cls = [base, variantClass, sizeClass, widthClass, disabledClass];
+---
+
+{href ? (
+  <a href={href} class:list={cls} target={target} rel={rel} aria-disabled={disabled || undefined} {...rest}>
+    {label}
+  </a>
+) : (
+  <button type={type} class:list={cls} disabled={disabled} {...rest}>
+    {label}
+  </button>
+)}

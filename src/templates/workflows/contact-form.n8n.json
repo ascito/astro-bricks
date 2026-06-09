@@ -1,0 +1,148 @@
+{
+  "name": "Contact Form → Telegram (__BRAND_NAME__)",
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "__WEBHOOK_PATH__",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-contact-001",
+      "name": "Webhook Contact",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "__WEBHOOK_ID__"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === Contact form processor ===\nconst raw = $input.first().json;\nconst body = raw.body || raw;\n\nconst headers = raw.headers || {};\nconst originHeader = headers.origin || headers.Origin || '';\nconst allowed = __ALLOWED_ORIGINS__;\nconst corsOrigin = allowed.includes(originHeader) ? originHeader : '__SITE_ORIGIN__';\n\nconst honeypot = (body.website || '').trim();\nconst message = (body.message || '').trim();\nconst name = (body.name || '').trim();\nconst email = (body.email || '').trim();\nconst subject = (body.subject || '').trim();\nconst site = (body.site || 'inconnu').trim();\n\n// Honeypot : succès silencieux 200 (bot, ne pas révéler)\nif (honeypot) {\n  return [{ json: { outcome: 'silent-success', corsOrigin, reason: 'honeypot' } }];\n}\n\n// Validation : retour erreur 422 explicite (utilisateur honnête)\nif (name.length < 2) {\n  return [{ json: { outcome: 'validation-error', corsOrigin, reason: 'name-required', detail: 'Le nom est obligatoire' } }];\n}\nconst emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nif (!emailRegex.test(email)) {\n  return [{ json: { outcome: 'validation-error', corsOrigin, reason: 'email-invalid', detail: 'Adresse email invalide' } }];\n}\nif (message.length < 10) {\n  return [{ json: { outcome: 'validation-error', corsOrigin, reason: 'message-too-short', detail: `Message trop court (${message.length} caractères, minimum 10)` } }];\n}\nif (message.length > 3000) {\n  return [{ json: { outcome: 'validation-error', corsOrigin, reason: 'message-too-long', detail: `Message trop long (${message.length} caractères, maximum 3000)` } }];\n}\n\n// Format MarkdownV2 (Telegram)\nconst escape = (s) => String(s || '').replace(/([_*\\[\\]()~`>#+\\-=|{}.!\\\\])/g, '\\\\$1');\n\nconst text = [\n  `📩 *Nouveau message contact*`,\n  ``,\n  `🌐 Site : *${escape(site)}*`,\n  `👤 Nom : ${escape(name)}`,\n  `📧 Email : ${escape(email)}`,\n  `📝 Sujet : ${escape(subject || '_Sans sujet_')}`,\n  ``,\n  `*Message :*`,\n  escape(message),\n  ``,\n  `_${escape(new Date().toISOString())}_`,\n].join('\\n');\n\nreturn [{ json: { outcome: 'ok', corsOrigin, text } }];"
+      },
+      "id": "process-001",
+      "name": "Process & Validate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" }, "conditions": [ { "leftValue": "={{ $json.outcome }}", "rightValue": "ok", "operator": { "type": "string", "operation": "equals" } } ], "combinator": "and" }, "renameOutput": true, "outputKey": "ok" },
+            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" }, "conditions": [ { "leftValue": "={{ $json.outcome }}", "rightValue": "validation-error", "operator": { "type": "string", "operation": "equals" } } ], "combinator": "and" }, "renameOutput": true, "outputKey": "validationError" },
+            { "conditions": { "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" }, "conditions": [ { "leftValue": "={{ $json.outcome }}", "rightValue": "silent-success", "operator": { "type": "string", "operation": "equals" } } ], "combinator": "and" }, "renameOutput": true, "outputKey": "silentSuccess" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "switch-001",
+      "name": "Route by outcome",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "chatId": "__TELEGRAM_CHAT_ID__",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "MarkdownV2",
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "telegram-send-001",
+      "name": "Send to Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [660, -160],
+      "credentials": {
+        "telegramApi": {
+          "id": "__CREDENTIAL_TELEGRAM_ID__",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\": true}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "={{ $('Process & Validate').first().json.corsOrigin }}" },
+              { "name": "Vary", "value": "Origin" }
+            ]
+          }
+        }
+      },
+      "id": "respond-200-001",
+      "name": "Respond 200 OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [880, -160]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": false, \"error\": \"{{ $json.detail }}\" }",
+        "options": {
+          "responseCode": 422,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "={{ $('Process & Validate').first().json.corsOrigin }}" },
+              { "name": "Vary", "value": "Origin" }
+            ]
+          }
+        }
+      },
+      "id": "respond-422-001",
+      "name": "Respond 422 Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 40]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"success\": true}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              { "name": "Access-Control-Allow-Origin", "value": "={{ $('Process & Validate').first().json.corsOrigin }}" },
+              { "name": "Vary", "value": "Origin" }
+            ]
+          }
+        }
+      },
+      "id": "respond-200-silent-001",
+      "name": "Respond 200 Silent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [660, 200]
+    }
+  ],
+  "connections": {
+    "Webhook Contact": {
+      "main": [[{ "node": "Process & Validate", "type": "main", "index": 0 }]]
+    },
+    "Process & Validate": {
+      "main": [[{ "node": "Route by outcome", "type": "main", "index": 0 }]]
+    },
+    "Route by outcome": {
+      "main": [
+        [{ "node": "Send to Telegram", "type": "main", "index": 0 }],
+        [{ "node": "Respond 422 Validation Error", "type": "main", "index": 0 }],
+        [{ "node": "Respond 200 Silent", "type": "main", "index": 0 }]
+      ]
+    },
+    "Send to Telegram": {
+      "main": [[{ "node": "Respond 200 OK", "type": "main", "index": 0 }]]
+    }
+  }
+}

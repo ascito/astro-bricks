@@ -1,0 +1,59 @@
+---
+/**
+ * JsonLdItemList — Schema.org ItemList pour pages d'index / listing.
+ *
+ * Idéal pour : /produit/, /comparatif/, /guide/, /marques/, /avis/.
+ *
+ * Accepte n'importe quel tableau d'items `{name, url, image?, description?}`.
+ *
+ * Usage :
+ * ```astro
+ * <JsonLdItemList
+ *   name="Avis produits saunas"
+ *   description="13 modèles testés en 2026"
+ *   items={products.map(p => ({ name: p.title, url: `/avis/${p.slug}`, image: p.image }))}
+ *   siteUrl="https://mon-site.fr"
+ * />
+ * ```
+ */
+
+interface Item {
+  name: string;
+  url: string;
+  image?: string | null;
+  description?: string;
+}
+
+interface Props {
+  name: string;
+  description?: string;
+  items: Item[];
+  /** URL canonique du site (obligatoire). */
+  siteUrl: string;
+}
+
+const { name, description, items, siteUrl } = Astro.props;
+
+const fullUrl = (path: string) =>
+  path.startsWith('http') ? path : `${siteUrl}${path}`;
+
+const listSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name,
+  description: description || name,
+  numberOfItems: items.length,
+  itemListElement: items.map((item, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    url: fullUrl(item.url),
+    name: item.name,
+    ...(item.image && {
+      image: item.image.startsWith('http') ? item.image : `${siteUrl}${item.image}`,
+    }),
+    ...(item.description && { description: item.description }),
+  })),
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(listSchema)} is:inline></script>

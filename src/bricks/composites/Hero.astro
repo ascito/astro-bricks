@@ -1,0 +1,64 @@
+---
+/**
+ * hero — Section hero / bannière principale
+ * Schema catalog : { title, subtitle?, eyebrow?, image?, overlay?, overlayOpacity?,
+ *                    textColor?, height?, align? }
+ * Slots : actions (boutons CTA)
+ */
+interface Props {
+  title: string;
+  subtitle?: string;
+  eyebrow?: string;
+  image?: string;
+  overlay?: 'none' | 'dark' | 'light';
+  overlayOpacity?: number;
+  textColor?: 'light' | 'dark';
+  height?: 'sm' | 'md' | 'lg' | 'screen';
+  align?: 'left' | 'center' | 'right';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title, subtitle, eyebrow, image,
+  overlay = 'none', overlayOpacity = 0.5,
+  textColor = 'light', height = 'md', align = 'center',
+  _brickId, _brickType, ...rest
+} = Astro.props;
+
+const heightClass = {
+  sm: 'min-h-[300px]', md: 'min-h-[450px]',
+  lg: 'min-h-[600px]', screen: 'min-h-screen',
+}[height];
+const textColorClass = textColor === 'light' ? 'text-white' : 'text-gray-900';
+const alignClass = {
+  left: 'items-start text-left', center: 'items-center text-center', right: 'items-end text-right',
+}[align];
+const overlayColor = overlay === 'dark' ? `rgba(0,0,0,${overlayOpacity})` : overlay === 'light' ? `rgba(255,255,255,${overlayOpacity})` : 'transparent';
+---
+<section
+  class:list={[
+    'relative flex flex-col justify-center px-4 py-16 sm:px-8',
+    heightClass, textColorClass, alignClass,
+  ]}
+  style={image ? `background-image: url(${image}); background-size: cover; background-position: center;` : ''}
+  {...rest}
+>
+  {overlay !== 'none' && image && (
+    <div class="absolute inset-0" style={`background-color: ${overlayColor};`} aria-hidden="true" />
+  )}
+  <div class="relative max-w-4xl mx-auto flex flex-col gap-4">
+    {eyebrow && (
+      <p class="text-xs font-bold uppercase tracking-[0.2em] opacity-90">{eyebrow}</p>
+    )}
+    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight">{title}</h1>
+    {subtitle && (
+      <p class="text-lg sm:text-xl opacity-90 max-w-2xl mx-auto">{subtitle}</p>
+    )}
+    {Astro.slots.has('actions') && (
+      <div class:list={['mt-4 flex flex-wrap gap-3', align === 'center' && 'justify-center', align === 'right' && 'justify-end']}>
+        <slot name="actions" />
+      </div>
+    )}
+  </div>
+</section>

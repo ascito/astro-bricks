@@ -1,0 +1,184 @@
+---
+/**
+ * ReviewLayout — Layout pour les pages d'avis produit (review ~1500 mots).
+ *
+ * Compose BaseLayout + JsonLdProduct enrichi + ArticleHeader + sticky CTA.
+ *
+ * Le contenu Markdown du review va dans le slot principal.
+ * Le slot `fiche` permet d'injecter une ProduitFiche custom au-dessus du contenu.
+ *
+ * Usage :
+ * ```astro
+ * <ReviewLayout
+ *   siteConfig={siteConfig}
+ *   product={product}
+ *   review={{
+ *     title: review.data.h1,
+ *     description: review.data.meta_description,
+ *     publishedTime: review.data.publication.toISOString(),
+ *     modifiedTime: review.data.mise_a_jour.toISOString(),
+ *   }}
+ *   amazonUrl={buildAmazonUrl(product.asin, 'review', { tag: 'montag-21' })}
+ *   breadcrumbs={[
+ *     { label: 'Accueil', href: '/' },
+ *     { label: 'Avis', href: '/avis' },
+ *     { label: product.title },
+ *   ]}
+ * >
+ *   <Content />
+ * </ReviewLayout>
+ * ```
+ */
+import type { ResolvedSiteConfig } from '../config/types';
+import BaseLayout from './BaseLayout.astro';
+import JsonLdProduct from '../bricks/seo/JsonLdProduct.astro';
+import JsonLdArticle from '../bricks/seo/JsonLdArticle.astro';
+import Breadcrumb from '../bricks/nav/Breadcrumb.astro';
+import Disclosure from '../bricks/business/Disclosure.astro';
+import ShareButtons from '../bricks/composites/ShareButtons.astro';
+import { formatDate } from '../lib/format';
+
+interface ProductForReview {
+  slug: string;
+  name: string;
+  brand?: string;
+  asin?: string | null;
+  amazon_url?: string | null;
+  image?: string | null;
+  price?: string | number | null;
+  currency?: string | null;
+  rating?: string | number | null;
+  review_count?: number | null;
+  category?: string | null;
+  verdict?: string | null;
+  pros?: string[];
+}
+
+interface ReviewMeta {
+  title: string;
+  description: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  wordCount?: number;
+}
+
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  siteConfig: ResolvedSiteConfig;
+  product: ProductForReview;
+  review: ReviewMeta;
+  /** URL Amazon avec tag affilié. */
+  amazonUrl?: string | null;
+  /** Path-prefix pour les pages produit. Défaut : `/avis`. */
+  productUrlPath?: string;
+  breadcrumbs?: BreadcrumbItem[];
+  logoSrc?: string;
+  /** Mention catégorie pour JsonLdProduct. */
+  defaultCategory?: string;
+}
+
+const {
+  siteConfig,
+  product,
+  review,
+  amazonUrl,
+  productUrlPath = '/avis',
+  breadcrumbs,
+  logoSrc,
+  defaultCategory,
+} = Astro.props;
+
+const cleanPath = productUrlPath.replace(/\/$/, '');
+const reviewUrl = `${cleanPath}/${product.slug}`;
+const fullReviewUrl = `${siteConfig.siteUrl}${reviewUrl}`;
+---
+
+<BaseLayout
+  siteConfig={siteConfig}
+  title={review.title}
+  description={review.description}
+  ogType="product"
+  ogImage={product.image ?? undefined}
+  publishedTime={review.publishedTime}
+  modifiedTime={review.modifiedTime}
+  breadcrumbs={breadcrumbs}
+  logoSrc={logoSrc}
+>
+  <Fragment slot="head">
+    <JsonLdProduct
+      product={product}
+      siteUrl={siteConfig.siteUrl}
+      urlPath={productUrlPath}
+      defaultCategory={defaultCategory}
+      sellerFallback={siteConfig.brand}
+      publishedTime={review.publishedTime}
+      modifiedTime={review.modifiedTime}
+    />
+    <JsonLdArticle
+      title={review.title}
+      description={review.description}
+      url={reviewUrl}
+      siteUrl={siteConfig.siteUrl}
+      siteName={siteConfig.brand}
+      category="Avis produit"
+      image={product.image}
+      publishedTime={review.publishedTime}
+      modifiedTime={review.modifiedTime}
+      wordCount={review.wordCount}
+      inLanguage={siteConfig.locale}
+    />
+  </Fragment>
+
+  <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+    {breadcrumbs && breadcrumbs.length > 0 && (
+      <Breadcrumb
+        items={breadcrumbs.map(b => ({ label: b.label, href: b.href }))}
+        siteUrl={siteConfig.siteUrl}
+        withJsonLd={false}
+      />
+    )}
+
+    <Disclosure variant="full" />
+
+    {/* Slot pour ProduitFiche custom (sinon header simple) */}
+    <slot name="fiche">
+      <header class="mt-8 mb-10">
+        {product.brand && (
+          <p class="text-sm font-semibold text-slate-600 uppercase tracking-wider mb-2">
+            {product.brand}
+          </p>
+        )}
+        <h1 class="font-display text-3xl md:text-5xl font-extrabold text-slate-900 mb-4 leading-tight">
+          {review.title}
+        </h1>
+        <p class="text-lg text-slate-600 leading-relaxed mb-4">{review.description}</p>
+        {review.modifiedTime && (
+          <time class="text-sm text-slate-500" datetime={review.modifiedTime}>
+            Mis à jour le {formatDate(review.modifiedTime)}
+          </time>
+        )}
+      </header>
+    </slot>
+
+    {/* Contenu Markdown du review */}
+    <div class="prose-review">
+      <slot />
+    </div>
+
+    <slot name="after-content" />
+
+    {/* Partage */}
+    <aside class="mt-12 border-t border-slate-200 pt-6" aria-label="Partager cet avis">
+      <ShareButtons
+        title={review.title}
+        description={review.description}
+        url={fullReviewUrl}
+        siteUrl={siteConfig.siteUrl}
+      />
+    </aside>
+  </article>
+</BaseLayout>

@@ -1,0 +1,21 @@
+---
+/**
+ * Exemple de page Astro consommant une composition Bricks.
+ * Copie ce fichier dans `src/pages/` d'un projet Astro pour le tester.
+ */
+import Render from '~/Render.astro';
+import composition from './composition.json';
+import type { Composition } from '~/engine/types';
+---
+
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{composition.name} — Démo astro-bricks</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4/dist/tailwind.min.css" />
+  </head>
+  <body class="bg-gray-50">
+    <Render composition={composition as Composition} />
+  </body>
+</html>

@@ -1,0 +1,84 @@
+---
+/**
+ * SectionHeader — En-tête de section éditoriale (eyebrow + titre + lead).
+ *
+ * Pattern très courant en design éditorial : pré-titre stylisé en uppercase
+ * au-dessus du H2, et paragraphe d'introduction en dessous.
+ *
+ * Customisation :
+ *  - `eyebrowClass` : classe Tailwind pour le pré-titre (couleur)
+ *  - `titleClass` : classe Tailwind pour le H2 (typo, couleur)
+ *  - `leadClass` : classe Tailwind pour le paragraphe d'intro
+ *  - `level` : niveau hx (h2 par défaut)
+ *  - `align` : `'left'` ou `'center'`
+ *
+ * Par défaut : palette neutre slate + display font système.
+ */
+interface Props {
+  /** Pré-titre (uppercase, petit, coloré). */
+  eyebrow?: string;
+  /** Titre principal. */
+  title: string;
+  /** Paragraphe d'introduction sous le titre. */
+  lead?: string;
+  /** Niveau de heading. Défaut : 2. */
+  level?: 1 | 2 | 3;
+  /** Alignement. Défaut : 'left'. */
+  align?: 'left' | 'center';
+  /** Classe Tailwind pour le eyebrow. Défaut : `text-slate-600`. */
+  eyebrowClass?: string;
+  /** Classe Tailwind pour le titre. Défaut : `text-slate-900`. */
+  titleClass?: string;
+  /** Classe Tailwind pour le lead. Défaut : `text-slate-600`. */
+  leadClass?: string;
+  /** Classes wrapper additionnelles. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  eyebrow,
+  title,
+  lead,
+  level = 2,
+  align = 'left',
+  eyebrowClass = 'text-slate-600',
+  titleClass = 'text-slate-900',
+  leadClass = 'text-slate-600',
+  class: customClass = '',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const HeadingTag = `h${level}` as 'h1' | 'h2' | 'h3';
+---
+
+<header
+  data-brick="section-header"
+  class:list={['mb-8', align === 'center' && 'text-center', customClass]}
+  {...rest}
+>
+  {eyebrow && (
+    <p class:list={['text-sm font-semibold uppercase tracking-wider mb-2', eyebrowClass]}>
+      {eyebrow}
+    </p>
+  )}
+  <HeadingTag
+    class:list={['font-sans text-3xl md:text-4xl font-extrabold tracking-tight leading-tight', titleClass]}
+  >
+    {title}
+  </HeadingTag>
+  {lead && (
+    <p
+      class:list={[
+        'mt-3 text-lg leading-relaxed',
+        leadClass,
+        align === 'center' && 'max-w-2xl mx-auto',
+      ]}
+    >
+      {lead}
+    </p>
+  )}
+</header>

@@ -1,0 +1,197 @@
+---
+/**
+ * Footer — Pied de page 4 colonnes avec slots éditables.
+ *
+ * Colonne 1 : marque + tagline + mention affiliation (props)
+ * Colonnes 2, 3, 4 : slots éditables (`<col-2>`, `<col-3>`, `<col-4>`)
+ * Ligne du bas : copyright + email contact
+ *
+ * Si les slots ne sont pas fournis, des valeurs par défaut sont affichées.
+ *
+ * Usage :
+ * ```astro
+ * <Footer
+ *   brandName="Saunaguide"
+ *   tagline="Tests, comparatifs et guides d'achat saunas."
+ *   contactEmail="contact@mon-site.fr"
+ *   foundingYear={2025}
+ * >
+ *   <Fragment slot="col-2">
+ *     <h3 class="footer-h3">Catalogue</h3>
+ *     <ul><li><a href="/avis">Avis</a></li></ul>
+ *   </Fragment>
+ * </Footer>
+ * ```
+ */
+
+interface FooterColumnProp {
+  title: string;
+  links: { label: string; href: string }[];
+}
+
+interface Props {
+  /** Nom de marque (col 1). */
+  brandName: string;
+  /** Tagline courte (col 1). */
+  tagline?: string;
+  /** Mention affiliation (col 1). Si absent, utilise la mention Amazon Associates par défaut. */
+  affiliationNotice?: string;
+  /** Email de contact (ligne du bas). */
+  contactEmail?: string;
+  /** Année de création (copyright). Défaut: année courante. */
+  foundingYear?: number;
+  /**
+   * Colonnes 2, 3, 4 du footer (data-driven).
+   * Si fourni, prioritaire sur les slots `col-2`, `col-3`, `col-4`.
+   * Max 3 colonnes.
+   */
+  columns?: FooterColumnProp[];
+  /** Classes additionnelles. */
+  class?: string;
+}
+
+const {
+  brandName,
+  tagline,
+  affiliationNotice = `En tant que Partenaire Amazon, ${brandName} réalise un bénéfice sur les achats éligibles. Les prix affichés sont indicatifs.`,
+  contactEmail,
+  foundingYear,
+  columns,
+  class: customClass = '',
+} = Astro.props;
+
+// Si columns est fourni, on l'utilise — sinon fallback sur les slots/defaults.
+const useColumns = Array.isArray(columns) && columns.length > 0;
+const col2 = useColumns ? columns![0] : null;
+const col3 = useColumns ? columns![1] ?? null : null;
+const col4 = useColumns ? columns![2] ?? null : null;
+
+const currentYear = new Date().getFullYear();
+const copyrightYears = foundingYear && foundingYear !== currentYear
+  ? `${foundingYear}-${currentYear}`
+  : String(currentYear);
+---
+
+<footer
+  data-brick="footer"
+  class:list={['bg-slate-900 text-slate-300 mt-16', customClass]}
+>
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+      {/* Col 1 — Marque */}
+      <div class="col-span-2 md:col-span-1">
+        <h3 class="font-display font-bold text-white text-lg mb-3">{brandName}</h3>
+        {tagline && (
+          <p class="text-sm text-slate-400 leading-relaxed mb-4">{tagline}</p>
+        )}
+        <p class="text-xs text-slate-500">{affiliationNotice}</p>
+      </div>
+
+      {/* Col 2 — data-driven (columns prop) OU slot éditable */}
+      <div class="footer-col">
+        {col2 ? (
+          <>
+            <h3 class="font-display font-bold text-white text-sm uppercase tracking-wider mb-3">{col2.title}</h3>
+            <ul class="space-y-2 text-sm">
+              {col2.links.map((link) => (
+                <li><a href={link.href} class="hover:text-white transition-colors">{link.label}</a></li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <slot name="col-2">
+            <h3 class="font-display font-bold text-white text-sm uppercase tracking-wider mb-3">Catalogue</h3>
+            <ul class="space-y-2 text-sm">
+              <li><a href="/" class="hover:text-white transition-colors">Accueil</a></li>
+            </ul>
+          </slot>
+        )}
+      </div>
+
+      {/* Col 3 — data-driven OU slot éditable */}
+      <div class="footer-col">
+        {col3 ? (
+          <>
+            <h3 class="font-display font-bold text-white text-sm uppercase tracking-wider mb-3">{col3.title}</h3>
+            <ul class="space-y-2 text-sm">
+              {col3.links.map((link) => (
+                <li><a href={link.href} class="hover:text-white transition-colors">{link.label}</a></li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <slot name="col-3">
+            <h3 class="font-display font-bold text-white text-sm uppercase tracking-wider mb-3">Le site</h3>
+            <ul class="space-y-2 text-sm">
+              <li><a href="/a-propos" class="hover:text-white transition-colors">À propos</a></li>
+              <li><a href="/contact" class="hover:text-white transition-colors">Contact</a></li>
+              <li><a href="/accessibilite" class="hover:text-white transition-colors">Accessibilité</a></li>
+            </ul>
+          </slot>
+        )}
+      </div>
+
+      {/* Col 4 — data-driven OU slot éditable */}
+      <div class="footer-col">
+        {col4 ? (
+          <>
+            <h3 class="font-display font-bold text-white text-sm uppercase tracking-wider mb-3">{col4.title}</h3>
+            <ul class="space-y-2 text-sm">
+              {col4.links.map((link) => (
+                <li><a href={link.href} class="hover:text-white transition-colors">{link.label}</a></li>
+              ))}
+            </ul>
+          </>
+        ) : (
+          <slot name="col-4">
+            <h3 class="font-display font-bold text-white text-sm uppercase tracking-wider mb-3">Légal</h3>
+            <ul class="space-y-2 text-sm">
+              <li><a href="/mentions-legales" class="hover:text-white transition-colors">Mentions légales</a></li>
+              <li><a href="/politique-confidentialite" class="hover:text-white transition-colors">Confidentialité</a></li>
+              <li><a href="/politique-cookies" class="hover:text-white transition-colors">Cookies</a></li>
+            </ul>
+          </slot>
+        )}
+      </div>
+    </div>
+
+    {/* Ligne du bas — slot legal optionnel */}
+    <div class="border-t border-slate-800 pt-6 flex flex-col sm:flex-row justify-between items-center gap-2 text-xs text-slate-500">
+      <slot name="legal">
+        <p>© {copyrightYears} {brandName} — Tous droits réservés.</p>
+        {contactEmail && (
+          <p>Contact : <a href={`mailto:${contactEmail}`} class="hover:text-white transition-colors">{contactEmail}</a></p>
+        )}
+      </slot>
+    </div>
+  </div>
+</footer>
+
+<style>
+  /* Styles par défaut pour les slots col-2/3/4 (les sites peuvent override) */
+  .footer-col :global(h3) {
+    font-weight: 700;
+    color: white;
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+  }
+  .footer-col :global(ul) {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .footer-col :global(li) {
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+  }
+  .footer-col :global(a) {
+    color: rgb(203 213 225); /* slate-300 */
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .footer-col :global(a:hover) {
+    color: white;
+  }
+</style>

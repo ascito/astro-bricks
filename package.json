@@ -1,0 +1,53 @@
+{
+  "name": "astro-bricks",
+  "version": "0.4.10",
+  "description": "Bibliothèque de composants Astro + moteur de composition JSON pour le réseau Factory (sites affiliés Amazon, design system unifié, briques business).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./Render.astro": "./src/Render.astro",
+    "./catalog.json": "./src/catalog.json",
+    "./schemas": {
+      "types": "./src/content/schemas/index.ts",
+      "default": "./src/content/schemas/index.ts"
+    },
+    "./bricks/*": "./src/bricks/*",
+    "./layouts/*": "./src/layouts/*",
+    "./templates/*": "./src/templates/*",
+    "./styles/*": "./src/styles/*",
+    "./lib/*": "./src/lib/*",
+    "./config/*": "./src/config/*"
+  },
+  "files": [
+    "src/",
+    "README.md",
+    "docs/"
+  ],
+  "keywords": [
+    "astro",
+    "bricks",
+    "composition",
+    "design-system",
+    "affiliate",
+    "amazon",
+    "seo",
+    "json-ld"
+  ],
+  "author": "ascito",
+  "license": "MIT",
+  "peerDependencies": {
+    "astro": "^5.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ascito/astro-bricks.git"
+  }
+}

@@ -1,0 +1,28 @@
+---
+/**
+ * container — Conteneur avec largeur max et padding
+ * Schema catalog : { maxWidth?, padding?, as? }
+ * Slot : children
+ */
+interface Props {
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
+  padding?: 'none' | 'sm' | 'md' | 'lg';
+  as?: 'div' | 'section' | 'article' | 'main' | 'header' | 'footer';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { maxWidth = 'lg', padding = 'md', as = 'div', _brickId, _brickType, ...rest } = Astro.props;
+const Tag = as;
+const widthClass = {
+  sm: 'max-w-3xl', md: 'max-w-4xl', lg: 'max-w-5xl',
+  xl: 'max-w-6xl', '2xl': 'max-w-7xl', full: 'max-w-full',
+}[maxWidth];
+const padClass = {
+  none: 'px-0', sm: 'px-3', md: 'px-4 sm:px-6', lg: 'px-4 sm:px-8 lg:px-12',
+}[padding];
+---
+<Tag class:list={['mx-auto', widthClass, padClass]} {...rest}>
+  <slot name="children" />
+  <slot />
+</Tag>

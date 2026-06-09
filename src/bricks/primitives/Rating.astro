@@ -1,0 +1,98 @@
+---
+/**
+ * rating — Notation par étoiles (catalog primitive)
+ * Schema : value, max=5, size, color, icon=star, showValue, showMax, reviewCount,
+ *          readonly=true, precision=half, emptyColor=gray, className, id
+ */
+interface Props {
+  value?: number;
+  max?: number;
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  color?: 'yellow' | 'orange' | 'red' | 'primary' | 'custom';
+  customColor?: string;
+  icon?: 'star' | 'heart' | 'circle' | 'fire';
+  showValue?: boolean;
+  showMax?: boolean;
+  reviewCount?: number;
+  readonly?: boolean;
+  precision?: 'full' | 'half' | 'quarter';
+  emptyColor?: 'gray' | 'light' | 'transparent';
+  className?: string;
+  id?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  value = 0,
+  max = 5,
+  size = 'md',
+  color = 'yellow',
+  customColor,
+  icon = 'star',
+  showValue = false,
+  showMax = false,
+  reviewCount,
+  precision = 'half',
+  emptyColor = 'gray',
+  className = '',
+  id,
+} = Astro.props;
+
+const sizePx = { xs: 12, sm: 14, md: 18, lg: 22, xl: 28 }[size];
+const textSize = { xs: 'text-xs', sm: 'text-sm', md: 'text-sm', lg: 'text-base', xl: 'text-lg' }[size];
+
+const filledColor = color === 'custom' && customColor ? customColor : {
+  yellow: '#facc15',
+  orange: '#fb923c',
+  red: '#f43f5e',
+  primary: '#6366f1',
+  custom: customColor || '#facc15',
+}[color];
+
+const emptyHex = { gray: '#cbd5e1', light: '#e5e7eb', transparent: 'transparent' }[emptyColor];
+
+// Génère les étoiles avec gestion de la précision
+const stars = Array.from({ length: max }, (_, i) => {
+  const diff = value - i;
+  let pct = 0;
+  if (diff >= 1) pct = 100;
+  else if (diff <= 0) pct = 0;
+  else if (precision === 'half') pct = diff >= 0.5 ? 50 : 0;
+  else if (precision === 'quarter') pct = Math.round(diff * 4) * 25;
+  else pct = Math.round(diff * 100);
+  return pct;
+});
+
+// Path SVG selon l'icône
+const iconPaths: Record<string, string> = {
+  star: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z',
+  heart: 'M12 21s-7-4.5-9.5-9C1 9 3 5 6.5 5c2 0 3.5 1 5.5 3 2-2 3.5-3 5.5-3 3.5 0 5.5 4 4 7-2.5 4.5-9.5 9-9.5 9z',
+  circle: 'M12 2a10 10 0 100 20 10 10 0 000-20z',
+  fire: 'M12 2c1 3 4 5 4 9a4 4 0 11-8 0c0-2 1-3 1-5 1 1 2 2 3 3-1-3 0-5 0-7z',
+};
+const iconPath = iconPaths[icon] || iconPaths.star;
+---
+<div id={id} class={`inline-flex items-center gap-2 ${className}`} role="img" aria-label={`Note ${value} sur ${max}`}>
+  <div class="inline-flex" style={`gap: 2px`}>
+    {stars.map((pct, i) => (
+      <span style={`position: relative; display: inline-block; width: ${sizePx}px; height: ${sizePx}px;`}>
+        <svg viewBox="0 0 24 24" width={sizePx} height={sizePx} style={`position: absolute; top:0; left:0; fill: ${emptyHex};`}>
+          <path d={iconPath} />
+        </svg>
+        <svg viewBox="0 0 24 24" width={sizePx} height={sizePx} style={`position: absolute; top:0; left:0; fill: ${filledColor}; clip-path: inset(0 ${100 - pct}% 0 0);`}>
+          <path d={iconPath} />
+        </svg>
+      </span>
+    ))}
+  </div>
+  {(showValue || showMax || reviewCount !== undefined) && (
+    <span class={`${textSize} text-slate-700 font-medium`}>
+      {showValue && value.toFixed(precision === 'full' ? 0 : 1)}
+      {showMax && `/${max}`}
+      {reviewCount !== undefined && (
+        <span class="text-slate-500 font-normal"> ({reviewCount.toLocaleString('fr-FR')})</span>
+      )}
+    </span>
+  )}
+</div>

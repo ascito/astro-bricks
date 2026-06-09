@@ -1,0 +1,45 @@
+---
+/**
+ * JsonLdBreadcrumb — Schema.org BreadcrumbList.
+ *
+ * À injecter dans BaseLayout (ou par page) avec les items du fil d'ariane.
+ * Le rendu visuel du breadcrumb est un autre composant (Breadcrumb.astro).
+ *
+ * Usage :
+ * ```astro
+ * <JsonLdBreadcrumb
+ *   items={[
+ *     { label: 'Accueil', url: '/' },
+ *     { label: 'Guides', url: '/guides' },
+ *     { label: 'Choisir un sauna', url: '/guides/choisir-sauna' },
+ *   ]}
+ *   siteUrl="https://mon-site.fr"
+ * />
+ * ```
+ */
+interface BreadcrumbItem {
+  label: string;
+  url: string;
+}
+
+interface Props {
+  items: BreadcrumbItem[];
+  /** URL canonique du site (obligatoire). */
+  siteUrl: string;
+}
+
+const { items, siteUrl } = Astro.props;
+
+const data = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map((item, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: item.label,
+    item: item.url.startsWith('http') ? item.url : new URL(item.url, siteUrl).href,
+  })),
+};
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(data)} is:inline></script>

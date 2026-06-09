@@ -1,0 +1,63 @@
+---
+/**
+ * figure-image — Figure avec image + légende (business piano)
+ * Schema : src (req), alt (req), caption?, credit?, width=1200, height=800,
+ *          loading=eager, rounded=true, fit='contain'|'cover', aspect?
+ *
+ * Sans aspect : ratio naturel de l'image, pas de bande de fond.
+ * Avec aspect (ex: '16/9') : crop via object-cover dans le ratio donné.
+ */
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+  credit?: string;
+  width?: number;
+  height?: number;
+  loading?: 'eager' | 'lazy';
+  rounded?: boolean;
+  fit?: 'contain' | 'cover';
+  aspect?: string; // ex: '16/9', '4/3' — applique aspect-ratio + object-cover
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  src,
+  alt,
+  caption,
+  credit,
+  width = 1200,
+  height = 800,
+  loading = 'eager',
+  rounded = true,
+  fit = 'contain',
+  aspect,
+} = Astro.props;
+
+const wrap = `${rounded ? 'rounded-2xl' : ''} overflow-hidden border border-slate-200`;
+const imgStyle = aspect
+  ? `aspect-ratio: ${aspect}; object-fit: cover;`
+  : `object-fit: ${fit};`;
+const imgClass = aspect
+  ? 'w-full h-auto'
+  : 'w-full h-auto block';
+---
+<figure class={wrap}>
+  <img
+    src={src}
+    alt={alt}
+    loading={loading}
+    decoding="async"
+    width={width}
+    height={height}
+    class={imgClass}
+    style={imgStyle}
+  />
+  {(caption || credit) && (
+    <figcaption class="text-xs text-slate-500 italic px-4 py-2 bg-slate-50 border-t border-slate-200">
+      {caption}{caption && credit && ' '}
+      {credit && <span class="text-slate-400">{credit}</span>}
+    </figcaption>
+  )}
+</figure>

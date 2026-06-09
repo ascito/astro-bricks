@@ -1,0 +1,19 @@
+---
+/**
+ * spacer — Espace vertical ou horizontal
+ * Schema catalog : { size?, orientation? }
+ */
+interface Props {
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  orientation?: 'vertical' | 'horizontal';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { size = 'md', orientation = 'vertical', _brickId, _brickType, ...rest } = Astro.props;
+
+const sizeClass = orientation === 'vertical'
+  ? { xs: 'h-1', sm: 'h-2', md: 'h-4', lg: 'h-8', xl: 'h-12', '2xl': 'h-16' }[size]
+  : { xs: 'w-1', sm: 'w-2', md: 'w-4', lg: 'w-8', xl: 'w-12', '2xl': 'w-16' }[size];
+---
+<span class:list={['inline-block', sizeClass]} aria-hidden="true" {...rest} />

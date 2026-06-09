@@ -1,0 +1,54 @@
+---
+/**
+ * BrickNode — rend récursivement une brique résolue.
+ *
+ * Pattern :
+ *  1. On récupère le composant Astro depuis le BRICK_REGISTRY
+ *  2. On lui passe les inputs comme props
+ *  3. Pour chaque enfant des slots, on rend <Astro.self node={child} slot={slotName} />.
+ *     Le `slot=` directement sur l'enfant remplace l'ancien pattern
+ *     `<Fragment slot={dynamic}>` qui cassait à la minification prod.
+ *  4. Si la brique n'a aucun slot, on appelle le composant sans children
+ *     (route minimale pour les briques feuilles, majoritaires).
+ */
+import type { ResolvedBrick } from './engine/types';
+import { BRICK_REGISTRY } from './engine/registry';
+import Fallback from './bricks/Fallback.astro';
+
+interface Props {
+  node: ResolvedBrick;
+}
+
+const { node } = Astro.props;
+const Component = (BRICK_REGISTRY[node.brick] as any) ?? Fallback;
+const slotNames = Object.keys(node.children);
+const hasSlots = slotNames.length > 0;
+const isFallback = Component === Fallback;
+
+// On aplatit en une liste de {slot, child} pour éviter la double map
+// et n'utiliser slot= que sur les enfants concrets (jamais sur <Fragment>).
+const slottedChildren: Array<{ slot: string; child: ResolvedBrick }> = [];
+for (const slotName of slotNames) {
+  for (const child of node.children[slotName]) {
+    slottedChildren.push({ slot: slotName, child });
+  }
+}
+---
+
+{!hasSlots && isFallback && (
+  <Component {...node.inputs} _brickId={node.id} _brickType={node.brick}>
+    <span>Brique inconnue : <code>{node.brick}</code></span>
+  </Component>
+)}
+
+{!hasSlots && !isFallback && (
+  <Component {...node.inputs} _brickId={node.id} _brickType={node.brick} />
+)}
+
+{hasSlots && (
+  <Component {...node.inputs} _brickId={node.id} _brickType={node.brick}>
+    {slottedChildren.map((entry) => (
+      <Astro.self node={entry.child} slot={entry.slot} />
+    ))}
+  </Component>
+)}

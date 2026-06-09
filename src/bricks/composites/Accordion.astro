@@ -1,0 +1,44 @@
+---
+/**
+ * accordion — FAQ accordéon repliable
+ * Schema catalog : { items: [{question, answer}], variant?, allowMultiple? }
+ *
+ * Notes : utilise <details> natif HTML pour accessibilité + zero JS.
+ * Si allowMultiple=false, on partage l'attribut name pour mutuelle exclusion (HTML5).
+ */
+interface AccordionItem {
+  question: string;
+  answer: string; // HTML autorisé
+}
+
+interface Props {
+  items: AccordionItem[];
+  variant?: 'default' | 'bordered' | 'separated';
+  allowMultiple?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { items = [], variant = 'default', allowMultiple = false, _brickId, _brickType, ...rest } = Astro.props;
+
+const groupName = allowMultiple ? undefined : `accordion-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const containerClass = {
+  default:   'divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white',
+  bordered:  'rounded-lg border-2 border-gray-300 bg-white',
+  separated: 'space-y-2',
+}[variant];
+
+const itemClass = variant === 'separated' ? 'rounded-lg border border-gray-200 bg-white' : '';
+---
+<div class={containerClass} {...rest}>
+  {items.map((item) => (
+    <details class:list={['group', itemClass]} name={groupName}>
+      <summary class="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 text-base font-semibold text-gray-900 hover:bg-gray-50 transition">
+        <span>{item.question}</span>
+        <span aria-hidden="true" class="flex-shrink-0 text-xl text-blue-600 transition-transform duration-200 group-open:rotate-45">+</span>
+      </summary>
+      <div class="px-5 pb-5 text-gray-700 [&_a]:text-blue-700 [&_a]:underline" set:html={item.answer} />
+    </details>
+  ))}
+</div>

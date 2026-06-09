@@ -1,0 +1,103 @@
+---
+/**
+ * BackToTop — Bouton flottant "Retour en haut".
+ *
+ * Apparaît après `threshold` pixels de scroll. Smooth scroll au clic.
+ * SVG inline, zéro dépendance externe. Compatible Astro View Transitions.
+ *
+ * Customisation :
+ *  - `class` : surcharge complète des classes du bouton (override les défauts)
+ *  - `threshold` : nombre de pixels avant apparition (défaut 400)
+ *  - `position` : `'bottom-right'` (défaut) ou `'bottom-left'`
+ *
+ * Par défaut le bouton utilise la palette `slate-800/slate-900` neutre.
+ * Pour matcher la palette du site, passer la prop `class` :
+ *
+ * ```astro
+ * <BackToTop class="bg-amber-700 hover:bg-amber-900 text-white" />
+ * ```
+ */
+interface Props {
+  /** Pixels de scroll avant apparition. Défaut : 400. */
+  threshold?: number;
+  /** Position fixe à l'écran. Défaut : bottom-right. */
+  position?: 'bottom-right' | 'bottom-left';
+  /** Override complet des classes du bouton (couleurs, hover, focus). */
+  class?: string;
+  /** Label aria pour l'accessibilité. Défaut : "Retour en haut de la page". */
+  ariaLabel?: string;
+}
+
+const {
+  threshold = 400,
+  position = 'bottom-right',
+  class: customClass = 'bg-slate-800 text-white hover:bg-slate-900 focus-visible:outline-slate-500',
+  ariaLabel = 'Retour en haut de la page',
+} = Astro.props;
+
+const positionClass =
+  position === 'bottom-right'
+    ? 'right-5 sm:right-6'
+    : 'left-5 sm:left-6';
+---
+
+<button
+  data-back-to-top
+  data-threshold={threshold}
+  type="button"
+  aria-label={ariaLabel}
+  class:list={[
+    'invisible fixed bottom-5 sm:bottom-6 z-40',
+    'flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center',
+    'rounded-full opacity-0 shadow-lg',
+    'transition-all duration-200',
+    'hover:-translate-y-0.5 hover:shadow-xl',
+    'focus-visible:outline-2 focus-visible:outline-offset-2',
+    positionClass,
+    customClass,
+  ]}
+>
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.5"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M12 19V5" />
+    <path d="M5 12l7-7 7 7" />
+  </svg>
+</button>
+
+<script>
+  function setupBackToTop() {
+    const buttons = document.querySelectorAll<HTMLButtonElement>('[data-back-to-top]');
+    buttons.forEach((btn) => {
+      if (btn.dataset.initialized === 'true') return;
+      btn.dataset.initialized = 'true';
+
+      const threshold = Number(btn.dataset.threshold ?? 400);
+
+      const toggleVisibility = () => {
+        const visible = window.scrollY > threshold;
+        btn.classList.toggle('invisible', !visible);
+        btn.classList.toggle('opacity-0', !visible);
+        btn.classList.toggle('opacity-100', visible);
+      };
+
+      window.addEventListener('scroll', toggleVisibility, { passive: true });
+      btn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+
+      toggleVisibility();
+    });
+  }
+
+  setupBackToTop();
+  document.addEventListener('astro:page-load', setupBackToTop);
+</script>

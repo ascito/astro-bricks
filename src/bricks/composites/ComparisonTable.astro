@@ -1,0 +1,115 @@
+---
+/**
+ * comparison-table — Tableau comparatif de plans/produits (catalog composite)
+ * Schema : plans[]{name, price?, period?, description?, highlighted?, cta?{label,href}},
+ *          features[]{name, tooltip?, values[bool|string]},
+ *          categories[]{name, features[]} (optionnel, regroupe les features),
+ *          sticky=true, showPrice=true, variant
+ */
+interface Plan {
+  name: string;
+  price?: string;
+  period?: string;
+  description?: string;
+  highlighted?: boolean;
+  cta?: { label: string; href: string };
+}
+interface Feature {
+  name: string;
+  tooltip?: string;
+  values: (boolean | string)[];
+}
+interface Category {
+  name: string;
+  features: Feature[];
+}
+interface Props {
+  plans?: Plan[];
+  features?: Feature[];
+  categories?: Category[];
+  sticky?: boolean;
+  showPrice?: boolean;
+  variant?: 'default' | 'compact' | 'detailed';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  plans = [],
+  features = [],
+  categories,
+  sticky = true,
+  showPrice = true,
+  variant = 'default',
+} = Astro.props;
+
+const cellPad = variant === 'compact' ? 'px-3 py-2' : variant === 'detailed' ? 'px-5 py-4' : 'px-4 py-3';
+const textSize = variant === 'compact' ? 'text-sm' : 'text-base';
+
+// Sections : si categories fourni on les utilise, sinon une seule section sans titre
+const sections = categories && categories.length > 0
+  ? categories
+  : [{ name: '', features }];
+
+const renderCell = (v: boolean | string) => {
+  if (typeof v === 'boolean') {
+    return v
+      ? '<span class="text-emerald-600 font-bold text-lg" aria-label="Oui">✓</span>'
+      : '<span class="text-rose-400 text-lg" aria-label="Non">✕</span>';
+  }
+  return `<span class="text-slate-700">${v}</span>`;
+};
+---
+<div class="overflow-x-auto rounded-2xl border border-slate-200">
+  <table class={`w-full ${textSize}`}>
+    <thead class={sticky ? 'sticky top-0 z-10 bg-white shadow-sm' : 'bg-slate-50'}>
+      <tr>
+        <th class={`${cellPad} text-left font-semibold text-slate-600 w-1/4 border-b border-slate-200`}>&nbsp;</th>
+        {plans.map((plan) => (
+          <th class={`${cellPad} text-center border-b border-slate-200 ${plan.highlighted ? 'bg-indigo-50' : ''}`}>
+            <div class={`font-sans font-extrabold tracking-tight ${plan.highlighted ? 'text-indigo-700' : 'text-slate-900'}`}>{plan.name}</div>
+            {plan.description && <div class="text-xs text-slate-500 mt-1">{plan.description}</div>}
+            {showPrice && plan.price && (
+              <div class="mt-2 text-2xl font-bold text-slate-900">
+                {plan.price}
+                {plan.period && <span class="text-sm font-normal text-slate-500"> / {plan.period}</span>}
+              </div>
+            )}
+            {plan.cta && (
+              <a
+                href={plan.cta.href}
+                class={`mt-3 inline-block rounded-full px-4 py-2 text-sm font-semibold transition ${plan.highlighted ? 'bg-indigo-600 text-white hover:bg-indigo-500' : 'border border-slate-300 text-slate-700 hover:border-indigo-500'}`}
+              >
+                {plan.cta.label}
+              </a>
+            )}
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {sections.map((section, sIdx) => (
+        <>
+          {section.name && (
+            <tr class="bg-slate-100">
+              <th colspan={plans.length + 1} class={`${cellPad} text-left font-semibold text-slate-700`}>{section.name}</th>
+            </tr>
+          )}
+          {section.features.map((feature, fIdx) => (
+            <tr class={fIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+              <td class={`${cellPad} font-medium text-slate-700`}>
+                {feature.name}
+                {feature.tooltip && (
+                  <span class="ml-1 text-slate-400" title={feature.tooltip} aria-label={feature.tooltip}>ⓘ</span>
+                )}
+              </td>
+              {feature.values.map((v, vIdx) => (
+                <td class={`${cellPad} text-center ${plans[vIdx]?.highlighted ? 'bg-indigo-50/40' : ''}`} set:html={renderCell(v)} />
+              ))}
+            </tr>
+          ))}
+        </>
+      ))}
+    </tbody>
+  </table>
+</div>

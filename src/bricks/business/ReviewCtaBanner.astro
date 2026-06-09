@@ -1,0 +1,73 @@
+---
+/**
+ * review-cta-banner — Bandeau CTA central (gros bouton orange Amazon)
+ * Schema : intro?, label, href, price?, disclaimers[]?, disclosure?
+ */
+interface Props {
+  intro?: string;
+  label: string;
+  href: string;
+  price?: string;
+  disclaimers?: string[];
+  disclosure?: string;
+  /** Nom du site, ex "PianoGuide", "SaunaGuide" — dérivé du tag dans href par défaut. */
+  siteName?: string;
+  variant?: 'amber' | 'slate';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  intro = 'Prêt à passer commande ?',
+  label,
+  href,
+  disclaimers = [],
+  disclosure: disclosureProp,
+  siteName,
+  variant = 'amber',
+} = Astro.props;
+
+// Dérive le nom du site depuis le tag dans le href (ex "?tag=montag-21" → "SaunaGuide"),
+// fallback "Nous" si pas de tag détecté. Pattern identique ReviewDisclosure v0.4.7.
+const derivedSiteName = siteName ?? (() => {
+  const tagMatch = href.match(/[?&]tag=([a-z]+)-\d+/i);
+  if (!tagMatch) return 'Nous';
+  const slug = tagMatch[1];
+  return slug.charAt(0).toUpperCase() + slug.slice(1).replace(/guide$/i, 'Guide');
+})();
+
+const disclosure = disclosureProp ?? `Lien affilié — ${derivedSiteName} perçoit une commission sans surcoût pour vous.`;
+
+const wrap = variant === 'amber'
+  ? 'bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200'
+  : 'bg-slate-50 border border-slate-200';
+---
+<div class={`text-center ${wrap} rounded-2xl p-8`}>
+  {intro && <p class="text-sm text-slate-700 mb-2">{intro}</p>}
+  {(() => {
+    const parts = (label || '').split(/\s+[—–]\s+/);
+    const main = parts[0];
+    const sub = parts.length > 1 ? parts.slice(1).join(' — ') : null;
+    return (
+      <a
+        href={href}
+        target="_blank"
+        rel="nofollow sponsored noopener"
+        class="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-full px-8 py-3 transition shadow-md"
+      >
+        <span class="flex flex-col items-start leading-tight">
+          <span class="text-lg">{main}</span>
+          {sub && <span class="text-sm font-semibold opacity-95 mt-0.5">{sub}</span>}
+        </span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="7" y1="17" x2="17" y2="7" />
+          <polyline points="7 7 17 7 17 17" />
+        </svg>
+      </a>
+    );
+  })()}
+  {disclaimers.length > 0 && (
+    <p class="text-xs text-slate-600 mt-3">{disclaimers.join(' · ')}</p>
+  )}
+  {disclosure && <p class="text-xs text-slate-500 mt-1">{disclosure}</p>}
+</div>

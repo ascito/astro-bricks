@@ -1,0 +1,63 @@
+---
+/**
+ * blockquote — Citation avec auteur et source (catalog primitive)
+ * Schema : content (required), cite, source, variant, color, align, showQuotes=true
+ */
+interface Props {
+  content: string;
+  cite?: string;
+  source?: string;
+  variant?: 'default' | 'bordered' | 'highlighted' | 'minimal' | 'large';
+  color?: 'default' | 'primary' | 'secondary' | 'muted';
+  align?: 'left' | 'center' | 'right';
+  showQuotes?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  content,
+  cite,
+  source,
+  variant = 'default',
+  color = 'default',
+  align = 'left',
+  showQuotes = true,
+} = Astro.props;
+
+const variantClass = {
+  default: 'pl-5 border-l-4 italic',
+  bordered: 'p-5 border border-slate-200 rounded-lg italic',
+  highlighted: 'p-5 bg-amber-50 border-l-4 border-amber-400 rounded-r-lg italic',
+  minimal: 'italic text-slate-700',
+  large: 'p-6 border-l-4 italic text-xl leading-relaxed',
+}[variant];
+
+const colorClass = {
+  default: 'border-indigo-400 text-slate-700',
+  primary: 'border-indigo-500 text-slate-800',
+  secondary: 'border-slate-500 text-slate-600',
+  muted: 'border-slate-300 text-slate-500',
+}[color];
+
+const alignClass = { left: 'text-left', center: 'text-center', right: 'text-right' }[align];
+---
+<figure class={`my-6 ${alignClass}`}>
+  <blockquote class={`${variantClass} ${colorClass}`}>
+    {showQuotes && variant === 'large' && (
+      <span class="text-5xl leading-none text-indigo-300 font-serif">"</span>
+    )}
+    <p class="m-0">{content}</p>
+  </blockquote>
+  {(cite || source) && (
+    <figcaption class={`mt-2 text-sm not-italic text-slate-600`}>
+      {cite && <cite class="font-semibold not-italic">— {cite}</cite>}
+      {cite && source && ', '}
+      {source && (
+        source.startsWith('http')
+          ? <a href={source} class="text-indigo-600 hover:underline" target="_blank" rel="noopener">{source}</a>
+          : <span>{source}</span>
+      )}
+    </figcaption>
+  )}
+</figure>

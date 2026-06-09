@@ -1,0 +1,129 @@
+---
+/**
+ * HubLayout — Layout pour les pages d'index / hub (listing).
+ *
+ * Couvre : /produit, /comparatif, /guide, /marques, /avis, etc.
+ *
+ * Compose BaseLayout + Breadcrumb + SectionHeader (eyebrow + h1 + lead)
+ * + JsonLdItemList automatique + grille de cards (via slot).
+ *
+ * Usage :
+ * ```astro
+ * <HubLayout
+ *   siteConfig={siteConfig}
+ *   eyebrow="Catalogue"
+ *   title="Toutes les marques de saunas"
+ *   description="13 marques testées et comparées"
+ *   items={brands.map(b => ({ name: b.name, url: `/marques/${b.slug}`, image: b.logo }))}
+ *   listName="Marques de saunas"
+ *   breadcrumbs={[
+ *     { label: 'Accueil', href: '/' },
+ *     { label: 'Marques' },
+ *   ]}
+ * >
+ *   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+ *     {brands.map(b => <MarqueCard brand={b} />)}
+ *   </div>
+ * </HubLayout>
+ * ```
+ */
+import type { ResolvedSiteConfig } from '../config/types';
+import BaseLayout from './BaseLayout.astro';
+import Breadcrumb from '../bricks/nav/Breadcrumb.astro';
+import SectionHeader from '../bricks/composites/SectionHeader.astro';
+import JsonLdItemList from '../bricks/seo/JsonLdItemList.astro';
+
+interface ListItem {
+  name: string;
+  url: string;
+  image?: string | null;
+  description?: string;
+}
+
+interface BreadcrumbItem {
+  label: string;
+  href?: string;
+}
+
+interface Props {
+  siteConfig: ResolvedSiteConfig;
+
+  // ─── Page metadata ───
+  title: string;
+  /** Description de la page (meta + lead). */
+  description: string;
+  /** Pré-titre stylé. */
+  eyebrow?: string;
+
+  // ─── Breadcrumb ───
+  breadcrumbs?: BreadcrumbItem[];
+
+  // ─── JSON-LD ItemList ───
+  /** Items pour le JSON-LD ItemList. */
+  items?: ListItem[];
+  /** Nom du listing pour JSON-LD. Défaut: title. */
+  listName?: string;
+
+  // ─── SeoHead ───
+  ogImage?: string;
+  noindex?: boolean;
+
+  /** Path du logo pour le Header. */
+  logoSrc?: string;
+}
+
+const {
+  siteConfig,
+  title,
+  description,
+  eyebrow,
+  breadcrumbs,
+  items,
+  listName,
+  ogImage,
+  noindex = false,
+  logoSrc,
+} = Astro.props;
+---
+
+<BaseLayout
+  siteConfig={siteConfig}
+  title={title}
+  description={description}
+  ogImage={ogImage}
+  noindex={noindex}
+  breadcrumbs={breadcrumbs}
+  logoSrc={logoSrc}
+>
+  {items && items.length > 0 && (
+    <Fragment slot="head">
+      <JsonLdItemList
+        name={listName ?? title}
+        description={description}
+        items={items}
+        siteUrl={siteConfig.siteUrl}
+      />
+    </Fragment>
+  )}
+
+  <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+    {breadcrumbs && breadcrumbs.length > 0 && (
+      <Breadcrumb
+        items={breadcrumbs.map(b => ({ label: b.label, href: b.href }))}
+        siteUrl={siteConfig.siteUrl}
+        withJsonLd={false}
+      />
+    )}
+
+    <div class="mt-8 mb-10">
+      <SectionHeader
+        eyebrow={eyebrow}
+        title={title}
+        lead={description}
+        level={1}
+      />
+    </div>
+
+    <slot />
+  </section>
+</BaseLayout>

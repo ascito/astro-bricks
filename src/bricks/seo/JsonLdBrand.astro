@@ -1,0 +1,110 @@
+---
+/**
+ * JsonLdBrand — Schema.org Brand enrichi avec aggregateRating pondéré.
+ *
+ * Si `products` est fourni, calcule automatiquement :
+ *  - `aggregateRating` : moyenne pondérée des notes Amazon des produits de la marque
+ *  - `numberOfItems`
+ *  - `sameAs` avec l'URL officielle (signal d'identité Schema.org)
+ *
+ * Usage :
+ * ```astro
+ * <JsonLdBrand
+ *   brand={brand}
+ *   products={brandProducts}
+ *   siteUrl="https://mon-site.fr"
+ *   urlPath="/marques"
+ * />
+ * ```
+ */
+
+interface Brand {
+  name: string;
+  slug: string;
+  short_description?: string | null;
+  long_description?: string | null;
+  logo_url?: string | null;
+  official_url?: string | null;
+  founded_year?: number | null;
+  country?: string | null;
+}
+
+interface BrandProduct {
+  rating?: string | number | null;
+  review_count?: number | null;
+}
+
+interface Props {
+  brand: Brand;
+  products?: BrandProduct[];
+  /** URL canonique du site (obligatoire). */
+  siteUrl: string;
+  /** Path des pages marque. Défaut: `'/marques'`. */
+  urlPath?: string;
+}
+
+const {
+  brand,
+  products = [],
+  siteUrl,
+  urlPath = '/marques',
+} = Astro.props;
+
+const cleanPath = urlPath.replace(/\/$/, '');
+
+// Calcule un aggregateRating pondéré par le nombre d'avis
+const ratedProducts = products.filter((p) => p.rating != null && p.review_count != null);
+let aggregateRating: Record<string, unknown> | undefined;
+if (ratedProducts.length > 0) {
+  let totalReviews = 0;
+  let weightedSum = 0;
+  for (const p of ratedProducts) {
+    const rating = parseFloat(String(p.rating));
+    const count = Number(p.review_count) || 0;
+    if (!isNaN(rating) && count > 0) {
+      weightedSum += rating * count;
+      totalReviews += count;
+    }
+  }
+  if (totalReviews > 0) {
+    aggregateRating = {
+      '@type': 'AggregateRating',
+      ratingValue: (weightedSum / totalReviews).toFixed(1),
+      reviewCount: totalReviews,
+      bestRating: '5',
+      worstRating: '1',
+    };
+  }
+}
+
+const brandSchema: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'Brand',
+  name: brand.name,
+  url: `${siteUrl}${cleanPath}/${brand.slug}`,
+  description: brand.short_description || undefined,
+  logo: brand.logo_url || undefined,
+};
+
+if (brand.official_url) {
+  brandSchema.sameAs = [brand.official_url];
+}
+
+if (brand.founded_year) {
+  brandSchema.foundingDate = String(brand.founded_year);
+}
+
+if (brand.country) {
+  brandSchema.areaServed = brand.country;
+}
+
+if (aggregateRating) {
+  brandSchema.aggregateRating = aggregateRating;
+}
+
+if (products.length > 0) {
+  brandSchema.numberOfItems = products.length;
+}
+---
+
+<script type="application/ld+json" set:html={JSON.stringify(brandSchema)} is:inline></script>

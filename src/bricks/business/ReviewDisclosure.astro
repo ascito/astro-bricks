@@ -1,0 +1,66 @@
+---
+/**
+ * review-disclosure — Disclosure RGPD/affiliation en pied de page review
+ * Schema : lastUpdate, asin?, amazonUrl?, amazonTag?, sourceUrl?, sourceLabel?,
+ *          reviewCount?, methodologyHref="/a-propos"
+ */
+interface Props {
+  lastUpdate: string;
+  asin?: string;
+  amazonUrl?: string;
+  amazonTag?: string;
+  /** Nom du site, ex "PianoGuide", "SaunaGuide" — dérivé de amazonTag par défaut. */
+  siteName?: string;
+  sourceUrl?: string;
+  sourceLabel?: string;
+  reviewCount?: number;
+  reviewExtractionDate?: string;
+  methodologyHref?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  lastUpdate,
+  asin,
+  amazonUrl,
+  amazonTag = 'montag-21',
+  siteName,
+  sourceUrl,
+  sourceLabel = 'fiche officielle constructeur',
+  reviewCount,
+  reviewExtractionDate,
+  methodologyHref = '/a-propos',
+} = Astro.props;
+
+// Dérive le nom du site depuis le tag si non fourni : "montag-21" → "PianoGuide"
+const derivedSiteName = siteName ?? (() => {
+  const slug = amazonTag.replace(/-\d+$/, '');
+  return slug.charAt(0).toUpperCase() + slug.slice(1).replace(/guide$/i, 'Guide');
+})();
+---
+<aside class="mt-12 text-xs text-slate-500 border-t border-slate-200 pt-4">
+  <p class="mb-2">
+    Prix relevé au {lastUpdate}. Les prix Amazon évoluent — vérifiez le prix actuel via le lien. {derivedSiteName} perçoit une commission Amazon (programme Partenaires Amazon, tag <code>{amazonTag}</code>) sur les achats effectués via les liens du site, <strong>sans surcoût pour vous</strong>. Cette commission finance notre travail éditorial (tests, recherche, croisement de sources) et nous permet de rester indépendants des marques.
+  </p>
+  <p>
+    Sources :
+    {amazonUrl && (
+      <>
+        <a href={amazonUrl} target="_blank" rel="nofollow noopener" class="underline">page produit Amazon FR{asin && <> (ASIN {asin})</>}</a>
+        {(sourceUrl || reviewCount) && ' · '}
+      </>
+    )}
+    {sourceUrl && (
+      <>
+        <a href={sourceUrl} target="_blank" rel="noopener" class="underline">{sourceLabel}</a>
+        {reviewCount && ' · '}
+      </>
+    )}
+    {reviewCount && (
+      <>{reviewCount} avis Amazon FR vérifiés{reviewExtractionDate && <> (extraction {reviewExtractionDate})</>}.</>
+    )}
+    {' '}
+    <a href={methodologyHref} class="underline">Méthodologie complète</a>.
+  </p>
+</aside>

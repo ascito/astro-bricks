@@ -1,0 +1,26 @@
+---
+/**
+ * heading — Titre h1 à h6
+ * Schema catalog : { content: string, level: 1-6, align?: enum }
+ */
+interface Props {
+  content: string;
+  level?: 1 | 2 | 3 | 4 | 5 | 6;
+  align?: 'left' | 'center' | 'right';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { content, level = 2, align = 'left', _brickId, _brickType, ...rest } = Astro.props;
+const Tag = `h${level}` as 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
+const alignClass = align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-left';
+const sizeClass = {
+  1: 'text-4xl sm:text-5xl font-bold',
+  2: 'text-3xl sm:text-4xl font-semibold',
+  3: 'text-2xl sm:text-3xl font-semibold',
+  4: 'text-xl sm:text-2xl font-semibold',
+  5: 'text-lg sm:text-xl font-semibold',
+  6: 'text-base sm:text-lg font-semibold',
+}[level];
+---
+<Tag class:list={[sizeClass, alignClass]} {...rest}>{content}</Tag>

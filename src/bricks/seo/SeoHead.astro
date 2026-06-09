@@ -1,0 +1,202 @@
+---
+/**
+ * SeoHead — Bloc <head> SEO complet pour un site Factory.
+ *
+ * Couvre :
+ *  - title + description + canonical + robots
+ *  - Open Graph (image dimensions + alt + type)
+ *  - Twitter Cards
+ *  - Article metadata (published_time / modified_time) si ogType=article
+ *  - Author (E-E-A-T)
+ *  - Theme color + favicons + manifest
+ *  - Preconnect / dns-prefetch (perf LCP)
+ *  - Webmaster validation tags (Bing, Google, Yandex)
+ *
+ * Le composant est **agnostique du SiteConfig** : il accepte des props brutes.
+ * BaseLayout fait l'agrégation depuis siteConfig et passe ici les bons champs.
+ *
+ * Usage typique :
+ * ```astro
+ * <SeoHead
+ *   title="Choisir une station météo connectée"
+ *   description="Notre guide d'achat 2026"
+ *   canonical="https://mon-site.fr/guide/choisir"
+ *   siteName="Station Météo Connectée"
+ *   themeColor="#1e40af"
+ *   locale="fr_FR"
+ * />
+ * ```
+ */
+
+interface PreconnectEntry {
+  href: string;
+  crossorigin?: boolean;
+}
+
+interface FaviconConfig {
+  /** Path vers `favicon.ico` (défaut: `/favicon.ico`). */
+  ico?: string;
+  /** Path vers le SVG (défaut: `/favicon.svg`). */
+  svg?: string;
+  /** Path vers l'apple-touch-icon (défaut: `/apple-touch-icon.png` ou `/images/icon-192.png`). */
+  appleTouchIcon?: string;
+  /** Path vers le webmanifest (défaut: `/site.webmanifest`). */
+  manifest?: string;
+}
+
+interface WebmasterValidation {
+  bing?: string;
+  google?: string;
+  yandex?: string;
+}
+
+interface Props {
+  // ─── Requis ───
+  title: string;
+  description: string;
+  canonical: string;
+  siteName: string;
+
+  // ─── Open Graph ───
+  ogImage?: string;
+  ogImageAlt?: string;
+  ogImageWidth?: number;
+  ogImageHeight?: number;
+  ogImageType?: 'image/webp' | 'image/jpeg' | 'image/png';
+  ogType?: 'website' | 'article' | 'product';
+
+  // ─── Article metadata ───
+  author?: string;
+  publishedTime?: string; // ISO 8601
+  modifiedTime?: string;  // ISO 8601
+
+  // ─── Twitter ───
+  twitterHandle?: string; // @handle
+  twitterCard?: 'summary' | 'summary_large_image';
+
+  // ─── Robots ───
+  noindex?: boolean;
+  nofollow?: boolean;
+
+  // ─── Locale ───
+  /** Locale OpenGraph (fr_FR, en_US, etc.). Défaut : 'fr_FR'. */
+  locale?: string;
+
+  // ─── Theme & icônes ───
+  themeColor?: string;
+  colorScheme?: 'light' | 'dark' | 'light dark';
+  favicons?: FaviconConfig;
+
+  // ─── Performance ───
+  preconnects?: PreconnectEntry[];
+  dnsPrefetch?: string[];
+
+  // ─── Webmaster validations ───
+  webmaster?: WebmasterValidation;
+}
+
+const {
+  title,
+  description,
+  canonical,
+  siteName,
+  ogImage = '/images/og-default.png',
+  ogImageAlt,
+  ogImageWidth = 1200,
+  ogImageHeight = 630,
+  ogImageType = 'image/png',
+  ogType = 'website',
+  author,
+  publishedTime,
+  modifiedTime,
+  twitterHandle,
+  twitterCard = 'summary_large_image',
+  noindex = false,
+  nofollow = false,
+  locale = 'fr_FR',
+  themeColor,
+  colorScheme = 'light',
+  favicons = {},
+  preconnects = [],
+  dnsPrefetch = [],
+  webmaster = {},
+} = Astro.props;
+
+const {
+  ico = '/favicon.ico',
+  svg = '/favicon.svg',
+  appleTouchIcon = '/apple-touch-icon.png',
+  manifest = '/site.webmanifest',
+} = favicons;
+
+// Origin pour préfixer ogImage si chemin relatif
+const origin = new URL(canonical).origin;
+const fullOgImage = ogImage.startsWith('http') ? ogImage : `${origin}${ogImage}`;
+const altText = ogImageAlt ?? `${siteName} — ${title}`;
+
+const robotsContent = noindex || nofollow
+  ? `${noindex ? 'noindex' : 'index'}, ${nofollow ? 'nofollow' : 'follow'}`
+  : 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1';
+---
+
+<title>{title}</title>
+<meta name="description" content={description} />
+{author && <meta name="author" content={author} />}
+<link rel="canonical" href={canonical} />
+<meta name="robots" content={robotsContent} />
+
+{/* Performance : connexions critiques anticipées */}
+{preconnects.map((p) => (
+  <link rel="preconnect" href={p.href} {...(p.crossorigin ? { crossorigin: '' } : {})} />
+))}
+{dnsPrefetch.map((href) => (
+  <link rel="dns-prefetch" href={href} />
+))}
+
+{/* Open Graph */}
+<meta property="og:type" content={ogType} />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:site_name" content={siteName} />
+<meta property="og:image" content={fullOgImage} />
+<meta property="og:image:secure_url" content={fullOgImage} />
+<meta property="og:image:type" content={ogImageType} />
+<meta property="og:image:width" content={String(ogImageWidth)} />
+<meta property="og:image:height" content={String(ogImageHeight)} />
+<meta property="og:image:alt" content={altText} />
+<meta property="og:locale" content={locale} />
+
+{/* Article metadata (si type=article) */}
+{ogType === 'article' && publishedTime && (
+  <meta property="article:published_time" content={publishedTime} />
+)}
+{ogType === 'article' && modifiedTime && (
+  <meta property="article:modified_time" content={modifiedTime} />
+)}
+{ogType === 'article' && author && (
+  <meta property="article:author" content={author} />
+)}
+
+{/* Twitter Card */}
+<meta name="twitter:card" content={twitterCard} />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={fullOgImage} />
+<meta name="twitter:image:alt" content={altText} />
+{twitterHandle && <meta name="twitter:site" content={twitterHandle} />}
+
+{/* Webmaster validations */}
+{webmaster.bing && <meta name="msvalidate.01" content={webmaster.bing} />}
+{webmaster.google && <meta name="google-site-verification" content={webmaster.google} />}
+{webmaster.yandex && <meta name="yandex-verification" content={webmaster.yandex} />}
+
+{/* Theme */}
+{themeColor && <meta name="theme-color" content={themeColor} />}
+<meta name="color-scheme" content={colorScheme} />
+
+{/* Favicons + manifest */}
+<link rel="icon" href={ico} sizes="any" />
+<link rel="icon" href={svg} type="image/svg+xml" />
+<link rel="apple-touch-icon" href={appleTouchIcon} />
+<link rel="manifest" href={manifest} />

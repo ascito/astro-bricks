@@ -1,0 +1,96 @@
+---
+/**
+ * prose-sections — Suite de sections rédactionnelles {title, paragraphs[], lists[]?}
+ * Schema : items[]{title, level=2, intro?, paragraphs[], blockquote?{content,cite},
+ *          lists?: [{title?, icon?: 'check'|'cross'|'arrow'|'dot', items: string[]}],
+ *          paragraphsAfter?[]}
+ *
+ * Les paragraphs[] et items[] supportent du HTML inline (<strong>, <em>, <a>).
+ * Pour les sections « À qui s'adresse » et autres, utiliser `lists[]` pour des
+ * <ul><li> propres avec icônes ✓/✗ — plutôt que d'aplatir en paragraphe + <br/>.
+ */
+interface ListBlock {
+  title?: string;
+  icon?: 'check' | 'cross' | 'arrow' | 'dot';
+  items: string[];
+}
+interface SectionItem {
+  title: string;
+  level?: 2 | 3 | 4;
+  intro?: string;
+  /** Liste de paragraphes HTML. Le champ `content` (singulier) est aussi accepté en fallback. */
+  paragraphs?: string[];
+  /** Fallback du champ `paragraphs` quand un seul paragraphe HTML est passé. */
+  content?: string;
+  blockquote?: { content: string; cite?: string };
+  lists?: ListBlock[];
+  paragraphsAfter?: string[];
+  id?: string;
+}
+interface Props {
+  items: SectionItem[];
+  gap?: 'sm' | 'md' | 'lg';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { items, gap = 'lg' } = Astro.props;
+
+const gapClass = ({ sm: 'mb-6 last:mb-0', md: 'mb-8 last:mb-0', lg: 'mb-12 last:mb-0' })[gap];
+const headingClass = {
+  2: 'font-sans text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 mb-4',
+  3: 'font-sans font-extrabold tracking-tight text-base md:text-lg text-slate-900 mt-6 mb-3',
+  4: 'font-sans font-bold tracking-tight text-sm md:text-base text-slate-900 mt-4 mb-2',
+} as const;
+
+const iconConfig = {
+  check: { glyph: '✓', color: 'text-emerald-600', listClass: 'list-none' },
+  cross: { glyph: '✗', color: 'text-rose-500', listClass: 'list-none' },
+  arrow: { glyph: '→', color: 'text-indigo-600', listClass: 'list-none' },
+  dot:   { glyph: '•', color: 'text-slate-400', listClass: 'list-none' },
+};
+---
+{items.map((section) => {
+  const level = section.level || 2;
+  const paragraphs = section.paragraphs ?? (section.content ? [section.content] : []);
+  return (
+    <section class={gapClass} id={section.id}>
+      {level === 2 && <h2 class={headingClass[2]} set:html={section.title} />}
+      {level === 3 && <h3 class={headingClass[3]} set:html={section.title} />}
+      {level === 4 && <h4 class={headingClass[4]} set:html={section.title} />}
+      {section.intro && <p class="text-slate-700 leading-relaxed mb-4" set:html={section.intro} />}
+      {paragraphs.map((p) => (
+        <p class="text-slate-700 leading-relaxed mb-4" set:html={p} />
+      ))}
+      {section.blockquote && (
+        <blockquote class="border-l-4 border-indigo-400 pl-6 pr-2 py-2 italic text-slate-700 my-8">
+          <p class="mb-3" set:html={section.blockquote.content} />
+          {section.blockquote.cite && (
+            <footer class="text-sm not-italic text-slate-600 mt-3" set:html={`— ${section.blockquote.cite}`} />
+          )}
+        </blockquote>
+      )}
+      {section.lists?.map((block) => {
+        const cfg = iconConfig[block.icon || 'dot'];
+        return (
+          <div class="mb-6">
+            {block.title && (
+              <p class="font-semibold text-slate-900 mb-3" set:html={block.title} />
+            )}
+            <ul class={`${cfg.listClass} space-y-2`}>
+              {block.items.map((it) => (
+                <li class="flex gap-2.5 items-start text-slate-700 leading-relaxed">
+                  <span class={`${cfg.color} flex-shrink-0 font-bold`} aria-hidden="true">{cfg.glyph}</span>
+                  <span set:html={it} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })}
+      {section.paragraphsAfter?.map((p) => (
+        <p class="text-slate-700 leading-relaxed mb-4" set:html={p} />
+      ))}
+    </section>
+  );
+})}

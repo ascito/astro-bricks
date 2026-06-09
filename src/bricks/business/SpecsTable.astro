@@ -1,0 +1,34 @@
+---
+/**
+ * specs-table — Tableau simple 2 colonnes label / valeur (specs techniques)
+ * Schema : title?, items[]{label, value (HTML autorisé)}
+ */
+interface SpecItem {
+  label: string;
+  value: string;
+}
+interface Props {
+  title?: string;
+  items: SpecItem[];
+  rounded?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { title, items, rounded = true } = Astro.props;
+---
+<section>
+  {title && <h2 class="font-sans text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 mb-4" set:html={title} />}
+  <div class={`bg-white border border-slate-200 overflow-hidden ${rounded ? 'rounded-lg' : ''}`}>
+    <table class="w-full text-sm">
+      <tbody class="divide-y divide-slate-100">
+        {items.map((row, idx) => (
+          <tr class={idx % 2 === 1 ? 'bg-slate-50/40' : ''}>
+            <td class="bg-slate-100/60 p-3 font-semibold w-1/3 text-slate-700" set:html={row.label} />
+            <td class="p-3 text-slate-700" set:html={row.value} />
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</section>
