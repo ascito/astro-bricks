@@ -116,8 +116,14 @@ const {
 } = Astro.props;
 
 // Canonical : prop > calculé depuis siteConfig + pathname
+// Astro.url.pathname respecte automatiquement la config trailingSlash du site
+// ('always' → /url/, 'never' → /url, 'ignore' → format réel servi).
+// Ne PAS stripper le slash final ici : ça désaligne la canonical du sitemap et de
+// l'URL réellement servie (cas observé sur pianoguide juin 2026 : Cloudflare Pages
+// sert /url/ avec slash, sitemap déclare /url/ avec slash, mais canonical sortait
+// /url sans slash → Google « Erreur liée à des redirections » dans Search Console).
 const computedCanonical = canonical
-  || `${siteConfig.siteUrl}${Astro.url.pathname.replace(/\/$/, '') || '/'}`;
+  || `${siteConfig.siteUrl}${Astro.url.pathname}`;
 
 // Locale BCP-47 → lang HTML
 const htmlLang = siteConfig.locale.split('-')[0]; // 'fr-FR' → 'fr'

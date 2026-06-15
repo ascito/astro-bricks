@@ -1,6 +1,6 @@
 {
   "name": "astro-bricks",
-  "version": "0.4.10",
+  "version": "0.4.11",
   "description": "Bibliothèque de composants Astro + moteur de composition JSON pour le réseau Factory (sites affiliés Amazon, design system unifié, briques business).",
   "type": "module",
   "main": "./src/index.ts",
