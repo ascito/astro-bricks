@@ -1,0 +1,204 @@
+---
+/**
+ * ProduitCardLink — Carte produit "guide-first" : toute la carte est un lien
+ * affilié Amazon unique (PAS de page détail / pas de double CTA).
+ *
+ * Différence avec `ProduitCard` (modèle produit-fiche, exige `detailUrl` + 2 CTAs) :
+ * ici le produit n'a pas de page dédiée — il est recommandé DANS un article/guide.
+ * Pensée pour les sites guide-first (produits recommandés sans page produit dédiée).
+ *
+ * Theme-aware : consomme les CSS variables (override dans le global.css du site) :
+ *   --bricks-color-surface      (default: #fff)
+ *   --bricks-color-border       (default: #e5e7eb / slate-200)
+ *   --bricks-color-text         (default: #0f172a / slate-900)
+ *   --bricks-color-text-muted   (default: #475569 / slate-600)
+ *   --bricks-color-text-faint   (default: #94a3b8 / slate-400)
+ *   --bricks-color-accent       (default: #4338ca / indigo-700)
+ *   --bricks-color-accent-text  (default: #ffffff)
+ *   --bricks-font-display       (default: inherit)
+ *
+ * Usage :
+ * ```astro
+ * <ProduitCardLink
+ *   product={{ name, image, rating, review_count, price, currency }}
+ *   amazonUrl={buildAmazonUrl(asin, { tag: 'yourtag-21' })}
+ *   priority={index < 3}
+ * />
+ * ```
+ */
+import { formatPrice } from '../../lib/format';
+
+interface ProductSummary {
+  name: string;
+  image?: string | null;
+  rating?: string | number | null;
+  review_count?: number | null;
+  price?: string | number | null;
+  currency?: string | null;
+}
+
+interface Props {
+  product: ProductSummary;
+  amazonUrl?: string | null;
+  amazonLabel?: string;
+  priceSuffix?: string;
+  /** Décimales du prix. Absent = défaut de formatPrice (0, prix high-ticket arrondis).
+   *  Passer 2 pour des consommables à centimes (ex : 11,99 €). */
+  priceDecimals?: number;
+  priority?: boolean;
+  emojiFallback?: string;
+}
+
+const {
+  product,
+  amazonUrl = '#',
+  amazonLabel = 'Voir sur Amazon',
+  priceSuffix = 'prix conseillé',
+  priceDecimals,
+  priority = false,
+  emojiFallback = '🛍',
+} = Astro.props;
+
+const ratingNum = product.rating != null ? parseFloat(String(product.rating)) : null;
+---
+
+<a
+  href={amazonUrl}
+  rel="sponsored nofollow noopener"
+  target="_blank"
+  class="pcl-card"
+  aria-label={`Voir ${product.name} sur Amazon (nouvelle fenêtre)`}
+>
+  {product.image ? (
+    <div class="pcl-imgwrap">
+      <img
+        src={product.image}
+        alt={product.name}
+        class="pcl-img"
+        loading={priority ? 'eager' : 'lazy'}
+        fetchpriority={priority ? 'high' : 'auto'}
+        decoding={priority ? 'sync' : 'async'}
+        width="400"
+        height="400"
+      />
+    </div>
+  ) : (
+    <div class="pcl-imgwrap pcl-imgwrap--empty"><span>{emojiFallback}</span></div>
+  )}
+
+  <div class="pcl-body">
+    <h3 class="pcl-title">{product.name}</h3>
+
+    {ratingNum != null && (
+      <div class="pcl-rating">
+        <div class="pcl-stars">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <svg width="14" height="14" viewBox="0 0 24 24"
+              fill={ratingNum >= star ? '#fbbf24' : 'none'}
+              stroke="#fbbf24" stroke-width="1.5" aria-hidden="true">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          ))}
+        </div>
+        <span class="pcl-rating-val">{ratingNum.toFixed(1)}</span>
+        {product.review_count ? (
+          <span class="pcl-rating-count">({product.review_count.toLocaleString('fr-FR')} avis)</span>
+        ) : null}
+      </div>
+    )}
+
+    {product.price != null && (
+      <div class="pcl-price">
+        <span class="pcl-price-val">{formatPrice(product.price, { currency: product.currency || 'EUR', decimals: priceDecimals })}</span>
+        <span class="pcl-price-suffix">{priceSuffix}</span>
+      </div>
+    )}
+
+    <div class="pcl-cta-wrap">
+      <span class="pcl-cta">{amazonLabel}</span>
+    </div>
+  </div>
+</a>
+
+<style>
+  .pcl-card {
+    --_pcl-surface: var(--bricks-color-surface, #ffffff);
+    --_pcl-border: var(--bricks-color-border, #e5e7eb);
+    --_pcl-text: var(--bricks-color-text, #0f172a);
+    --_pcl-text-muted: var(--bricks-color-text-muted, #475569);
+    --_pcl-text-faint: var(--bricks-color-text-faint, #94a3b8);
+    --_pcl-accent: var(--bricks-color-accent, #4338ca);
+    --_pcl-accent-text: var(--bricks-color-accent-text, #ffffff);
+    --_pcl-font-display: var(--bricks-font-display, inherit);
+
+    display: flex;
+    flex-direction: column;
+    background: var(--_pcl-surface);
+    border: 1px solid var(--_pcl-border);
+    border-radius: 1rem;
+    overflow: hidden;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+    transition: box-shadow 0.2s;
+    text-decoration: none;
+    height: 100%;
+  }
+  .pcl-card:hover { box-shadow: 0 4px 12px rgb(0 0 0 / 0.1); }
+  .pcl-card:focus-visible { outline: 2px solid var(--_pcl-accent); outline-offset: 2px; }
+
+  .pcl-imgwrap {
+    aspect-ratio: 1 / 1;
+    background: var(--_pcl-surface);
+    padding: 1rem;
+    overflow: hidden;
+  }
+  .pcl-imgwrap--empty { display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+  .pcl-img {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    transition: transform 0.3s;
+  }
+  .pcl-card:hover .pcl-img { transform: scale(1.05); }
+
+  .pcl-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    border-top: 1px solid var(--_pcl-border);
+  }
+  .pcl-title {
+    font-family: var(--_pcl-font-display);
+    font-size: 0.875rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--_pcl-text);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .pcl-rating { display: flex; align-items: center; gap: 0.375rem; margin-top: 0.5rem; font-size: 0.8125rem; }
+  .pcl-stars { display: flex; }
+  .pcl-rating-val { color: var(--_pcl-text); font-weight: 500; }
+  .pcl-rating-count { color: var(--_pcl-text-faint); font-size: 0.75rem; }
+
+  .pcl-price { margin-top: 0.75rem; display: flex; align-items: baseline; gap: 0.5rem; }
+  .pcl-price-val { font-family: var(--_pcl-font-display); font-size: 1.25rem; font-weight: 700; color: var(--_pcl-text); }
+  .pcl-price-suffix { font-size: 0.75rem; color: var(--_pcl-text-faint); }
+
+  .pcl-cta-wrap { margin-top: auto; padding-top: 1rem; }
+  .pcl-cta {
+    display: block;
+    text-align: center;
+    width: 100%;
+    background: var(--_pcl-accent);
+    color: var(--_pcl-accent-text);
+    font-size: 0.875rem;
+    font-weight: 600;
+    padding: 0.625rem 1rem;
+    border-radius: 0.5rem;
+    min-height: 44px;
+    line-height: 1.5;
+  }
+  .pcl-card:hover .pcl-cta { filter: brightness(0.92); }
+</style>

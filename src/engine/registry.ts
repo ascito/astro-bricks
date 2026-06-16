@@ -40,6 +40,7 @@ import Disclosure from '../bricks/business/Disclosure.astro';
 import Faq from '../bricks/business/Faq.astro';
 import AffiliateLink from '../bricks/business/AffiliateLink.astro';
 import ProduitCard from '../bricks/business/ProduitCard.astro';
+import ProduitCardLink from '../bricks/business/ProduitCardLink.astro';
 import ArticleCard from '../bricks/business/ArticleCard.astro';
 import FigureImage from '../bricks/business/FigureImage.astro';
 import ReviewVerdict from '../bricks/business/ReviewVerdict.astro';
@@ -106,6 +107,7 @@ export const BRICK_REGISTRY: Record<string, unknown> = {
   faq: Faq,
   'affiliate-link': AffiliateLink,
   'produit-card': ProduitCard,
+  'produit-card-link': ProduitCardLink,
   'article-card': ArticleCard,
   'figure-image': FigureImage,
   'review-verdict': ReviewVerdict,

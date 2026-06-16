@@ -13,7 +13,7 @@
  *   items={[
  *     { label: 'Accueil', href: '/' },
  *     { label: 'Guides', href: '/guides' },
- *     { label: 'Choisir un sauna' }, // dernier item = page courante, sans href
+ *     { label: 'Choisir un sauna' }, // dernier = page courante, sans href → son `item` JSON-LD = URL courante (auto via Astro.url)
  *   ]}
  *   siteUrl="https://mon-site.fr"
  *   hoverClass="hover:text-amber-800"
@@ -31,6 +31,9 @@ interface Props {
   siteUrl?: string;
   /** Active l'injection du JSON-LD BreadcrumbList. Défaut: true. */
   withJsonLd?: boolean;
+  /** URL (path ou absolue) de la page courante, utilisée pour le `item` du dernier
+   *  élément (qui n'a pas de href). Défaut : `Astro.url.pathname`. */
+  currentUrl?: string;
   /** Classe Tailwind pour le hover des liens. Défaut: `hover:text-slate-900`. */
   hoverClass?: string;
   /** Classes wrapper additionnelles. */
@@ -41,21 +44,29 @@ const {
   items,
   siteUrl,
   withJsonLd = true,
+  currentUrl,
   hoverClass = 'hover:text-slate-900 hover:underline',
   class: customClass = 'text-sm',
 } = Astro.props;
 
+// Path de la page courante (pour donner un `item` au dernier crumb, qui n'a pas de href).
+// Évite l'erreur Google « Champ item manquant dans itemListElement ».
+const currentPath = currentUrl ?? Astro.url.pathname;
+
 const jsonLd = (withJsonLd && siteUrl) ? {
   '@context': 'https://schema.org',
   '@type': 'BreadcrumbList',
-  itemListElement: items.map((item, idx) => ({
-    '@type': 'ListItem',
-    position: idx + 1,
-    name: item.label,
-    ...(item.href
-      ? { item: item.href.startsWith('http') ? item.href : `${siteUrl}${item.href}` }
-      : {}),
-  })),
+  itemListElement: items.map((item, idx) => {
+    const href = item.href ?? (idx === items.length - 1 ? currentPath : undefined);
+    return {
+      '@type': 'ListItem',
+      position: idx + 1,
+      name: item.label,
+      ...(href
+        ? { item: href.startsWith('http') ? href : `${siteUrl}${href}` }
+        : {}),
+    };
+  }),
 } : null;
 ---
 
