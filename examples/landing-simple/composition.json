@@ -60,8 +60,8 @@
       "id": "info-alert",
       "brick": "alert",
       "inputs": {
-        "title": "Repo en early stage",
-        "content": "Sur les 93 briques de la spec, 15 sont implémentées dans cette première itération. Voir <code>docs/REVUE-CATALOG.md</code> pour la roadmap.",
+        "title": "Catalogue complet",
+        "content": "Les 93 briques du catalogue sont implémentées (v0.5.1), en plus des briques business et SEO. Voir <code>docs/REVUE-CATALOG.md</code> pour les détails.",
         "variant": "info"
       }
     },
