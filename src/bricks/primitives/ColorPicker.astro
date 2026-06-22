@@ -1,0 +1,216 @@
+---
+/**
+ * color-picker — Sélecteur de couleur.
+ *
+ * Schema catalog : {
+ *   name?, label?, value?, bind?, presets?, showValue?, showPreview?,
+ *   allowCustom?, size?, variant?, disabled?
+ * }
+ *
+ * S'appuie sur <input type="color"> natif (`allowCustom`) et/ou une palette de
+ * pastilles `presets`. Un <script> client synchronise l'aperçu, le champ hex et la
+ * sélection de preset, avec ré-init sur astro:page-load + guard dataset.initialized.
+ * `bind` est exposé via data-value.
+ *
+ * Théming : `--bricks-color-border`, `--bricks-color-text`, `--bricks-color-surface`,
+ * `--bricks-color-accent` (focus / preset sélectionné) avec fallbacks.
+ */
+interface Props {
+  /** Nom du champ. */
+  name?: string;
+  /** Label du champ. */
+  label?: string;
+  /** Couleur initiale (hex). Défaut : "#3b82f6". */
+  value?: string;
+  /** Chemin binding. Génère data-value. */
+  bind?: string;
+  /** Palette de couleurs prédéfinies (hex). */
+  presets?: string[];
+  /** Afficher la valeur hex. Défaut : true. */
+  showValue?: boolean;
+  /** Afficher l'aperçu de couleur. Défaut : true. */
+  showPreview?: boolean;
+  /** Permettre les couleurs personnalisées. Défaut : true. */
+  allowCustom?: boolean;
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Disposition. Défaut : "default". */
+  variant?: 'default' | 'inline' | 'compact';
+  /** Désactiver le champ. Défaut : false. */
+  disabled?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  label,
+  value = '#3b82f6',
+  bind,
+  presets = [],
+  showValue = true,
+  showPreview = true,
+  allowCustom = true,
+  size = 'md',
+  variant = 'default',
+  disabled = false,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const fieldId = `color-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const swatch = { sm: 'h-7 w-7', md: 'h-9 w-9', lg: 'h-11 w-11' }[size];
+const textSize = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' }[size];
+const presetSwatch = { sm: 'h-6 w-6', md: 'h-7 w-7', lg: 'h-8 w-8' }[size];
+
+const rowClass =
+  variant === 'inline' ? 'flex flex-wrap items-center gap-3' : 'flex items-center gap-3';
+---
+<div
+  class="mb-6"
+  data-color-picker
+  data-disabled={disabled ? 'true' : 'false'}
+  {...rest}
+>
+  {label && (
+    <label for={fieldId} class:list={['mb-1.5 block', textSize, 'text-[var(--bricks-color-text,#0f172a)]']}>
+      {label}
+    </label>
+  )}
+  <div class={rowClass}>
+    {showPreview && (
+      <span
+        class:list={[swatch, 'shrink-0 rounded-md border border-[var(--bricks-color-border,#e2e8f0)] shadow-inner']}
+        style={`background:${value}`}
+        data-color-preview
+        aria-hidden="true"
+      ></span>
+    )}
+
+    {allowCustom && (
+      <input
+        id={fieldId}
+        type="color"
+        name={name}
+        value={value}
+        disabled={disabled}
+        data-value={bind ?? undefined}
+        data-color-input
+        aria-label={label ?? 'Choisir une couleur'}
+        class:list={[
+          swatch,
+          'shrink-0 cursor-pointer rounded-md border border-[var(--bricks-color-border,#e2e8f0)] bg-transparent p-0.5',
+          'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bricks-color-accent,#2563eb)]',
+          'disabled:cursor-not-allowed disabled:opacity-60',
+        ]}
+      />
+    )}
+
+    {!allowCustom && (
+      <input type="hidden" name={name} value={value} data-value={bind ?? undefined} data-color-input />
+    )}
+
+    {showValue && (
+      <input
+        type="text"
+        value={value}
+        disabled={disabled}
+        spellcheck={false}
+        data-color-hex
+        aria-label="Valeur hexadécimale"
+        class:list={[
+          'w-24 rounded-md border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] px-2 py-1.5 font-mono uppercase text-[var(--bricks-color-text,#0f172a)]',
+          textSize,
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+          'disabled:cursor-not-allowed disabled:opacity-60',
+        ]}
+      />
+    )}
+  </div>
+
+  {presets.length > 0 && (
+    <div class="mt-2 flex flex-wrap gap-2" role="group" aria-label="Couleurs prédéfinies">
+      {presets.map((preset) => (
+        <button
+          type="button"
+          data-color-preset
+          data-preset-value={preset}
+          title={preset}
+          disabled={disabled}
+          aria-label={`Couleur ${preset}`}
+          class:list={[
+            presetSwatch,
+            'rounded-md border border-[var(--bricks-color-border,#e2e8f0)]',
+            'transition hover:scale-105',
+            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bricks-color-accent,#2563eb)]',
+            'aria-[pressed=true]:ring-2 aria-[pressed=true]:ring-[var(--bricks-color-accent,#2563eb)] aria-[pressed=true]:ring-offset-1',
+            'disabled:cursor-not-allowed disabled:opacity-60',
+          ]}
+          style={`background:${preset}`}
+          aria-pressed={preset.toLowerCase() === value.toLowerCase() ? 'true' : 'false'}
+        ></button>
+      ))}
+    </div>
+  )}
+</div>
+
+<script>
+  function setupColorPicker(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+    if (root.dataset.disabled === 'true') return;
+
+    const colorInput = root.querySelector<HTMLInputElement>('[data-color-input]');
+    const hexInput = root.querySelector<HTMLInputElement>('[data-color-hex]');
+    const preview = root.querySelector<HTMLElement>('[data-color-preview]');
+    const presets = Array.from(
+      root.querySelectorAll<HTMLButtonElement>('[data-color-preset]')
+    );
+    if (!colorInput) return;
+
+    const isValidHex = (v: string) => /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v);
+
+    const apply = (raw: string, opts: { syncHex?: boolean } = {}) => {
+      const v = raw.startsWith('#') ? raw : `#${raw}`;
+      if (!isValidHex(v)) return;
+      colorInput.value = v;
+      if (preview) preview.style.background = v;
+      if (hexInput && opts.syncHex !== false) hexInput.value = v.toUpperCase();
+      presets.forEach((p) =>
+        p.setAttribute(
+          'aria-pressed',
+          (p.dataset.presetValue || '').toLowerCase() === v.toLowerCase() ? 'true' : 'false'
+        )
+      );
+    };
+
+    colorInput.addEventListener('input', () => apply(colorInput.value));
+
+    if (hexInput) {
+      hexInput.addEventListener('input', () => {
+        if (isValidHex(hexInput.value)) apply(hexInput.value, { syncHex: false });
+      });
+      hexInput.addEventListener('blur', () => {
+        if (!isValidHex(hexInput.value)) hexInput.value = colorInput.value.toUpperCase();
+      });
+    }
+
+    presets.forEach((p) => {
+      p.addEventListener('click', () => {
+        const v = p.dataset.presetValue;
+        if (v) apply(v);
+      });
+    });
+  }
+
+  function initAllColorPicker() {
+    document
+      .querySelectorAll<HTMLElement>('[data-color-picker]')
+      .forEach((el) => setupColorPicker(el));
+  }
+
+  initAllColorPicker();
+  document.addEventListener('astro:page-load', initAllColorPicker);
+</script>

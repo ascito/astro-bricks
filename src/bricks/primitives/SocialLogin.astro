@@ -1,0 +1,124 @@
+---
+/**
+ * social-login — Boutons de connexion sociale.
+ *
+ * Schema catalog : { providers?, variant?, size?, layout?, showLabels?, dividerText? }
+ *
+ * Fonctionnement : rend un bouton (lien stylé) par provider. Chaque provider connu
+ * (google, facebook, apple, github, twitter/x, microsoft, linkedin) a son libellé et
+ * sa couleur de marque. Le lien pointe par défaut vers `/auth/<provider>` ; aucune
+ * logique OAuth n'est câblée ici. `variant` : `button` (icône + label), `icon` (icône
+ * ronde seule), `icon-button` (icône + label, compact). `layout` dispose les boutons
+ * en colonne, en ligne ou en grille. `dividerText` ajoute un séparateur sous les boutons.
+ *
+ * Théming : neutre (couleurs de marque par provider) ; le séparateur consomme
+ * `--bricks-color-border` et `--bricks-color-text-muted`. Marge basse `mb-6`.
+ */
+interface Props {
+  /** Providers à afficher. Défaut : ["google", "facebook"]. */
+  providers?: string[];
+  /** Style des boutons. Défaut : "button". */
+  variant?: 'button' | 'icon' | 'icon-button';
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Disposition. Défaut : "vertical". */
+  layout?: 'horizontal' | 'vertical' | 'grid';
+  /** Afficher les libellés. Défaut : true. */
+  showLabels?: boolean;
+  /** Texte du séparateur sous les boutons (ex: "ou"). */
+  dividerText?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  providers = ['google', 'facebook'],
+  variant = 'button',
+  size = 'md',
+  layout = 'vertical',
+  showLabels = true,
+  dividerText,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+type ProviderDef = { label: string; bg: string; fg: string; border?: boolean };
+const registry: Record<string, ProviderDef> = {
+  google: { label: 'Google', bg: '#ffffff', fg: '#3c4043', border: true },
+  facebook: { label: 'Facebook', bg: '#1877f2', fg: '#ffffff' },
+  apple: { label: 'Apple', bg: '#000000', fg: '#ffffff' },
+  github: { label: 'GitHub', bg: '#24292f', fg: '#ffffff' },
+  twitter: { label: 'X', bg: '#000000', fg: '#ffffff' },
+  x: { label: 'X', bg: '#000000', fg: '#ffffff' },
+  microsoft: { label: 'Microsoft', bg: '#ffffff', fg: '#3c4043', border: true },
+  linkedin: { label: 'LinkedIn', bg: '#0a66c2', fg: '#ffffff' },
+};
+
+const sizeClass = {
+  sm: 'text-sm px-3 py-1.5 gap-2',
+  md: 'text-sm px-4 py-2.5 gap-2.5',
+  lg: 'text-base px-5 py-3 gap-3',
+}[size];
+
+const iconOnlyClass = {
+  sm: 'h-9 w-9',
+  md: 'h-11 w-11',
+  lg: 'h-12 w-12',
+}[size];
+
+const iconPx = { sm: 16, md: 18, lg: 20 }[size];
+
+const layoutClass = {
+  vertical: 'flex flex-col gap-2.5',
+  horizontal: 'flex flex-row flex-wrap gap-2.5',
+  grid: 'grid grid-cols-2 gap-2.5',
+}[layout];
+
+const isIconOnly = variant === 'icon';
+const showLabel = showLabels && !isIconOnly;
+
+const items = providers
+  .map((key) => ({ key, def: registry[key.toLowerCase()] }))
+  .filter((p): p is { key: string; def: ProviderDef } => Boolean(p.def));
+---
+
+<div class="mb-6" {...rest}>
+  <div class={isIconOnly ? 'flex flex-wrap gap-2.5 justify-center' : layoutClass}>
+    {items.map(({ key, def }) => (
+      <a
+        href={`/auth/${key.toLowerCase()}`}
+        rel="nofollow"
+        aria-label={`Continuer avec ${def.label}`}
+        class:list={[
+          'inline-flex items-center justify-center rounded-lg font-medium transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2',
+          isIconOnly ? `${iconOnlyClass} rounded-full` : sizeClass,
+          def.border ? 'border border-[var(--bricks-color-border,#e2e8f0)]' : '',
+        ]}
+        style={`background:${def.bg};color:${def.fg}`}
+        data-provider={key.toLowerCase()}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width={iconPx}
+          height={iconPx}
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          class="shrink-0"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" />
+          <text x="12" y="16" text-anchor="middle" font-size="11" font-weight="700" fill="currentColor" stroke="none">{def.label.charAt(0)}</text>
+        </svg>
+        {showLabel && <span>{def.label}</span>}
+      </a>
+    ))}
+  </div>
+  {dividerText && (
+    <div class="my-4 flex items-center gap-3 text-xs uppercase tracking-wide text-[var(--bricks-color-text-muted,#475569)]">
+      <span class="h-px flex-1 bg-[var(--bricks-color-border,#e2e8f0)]"></span>
+      <span>{dividerText}</span>
+      <span class="h-px flex-1 bg-[var(--bricks-color-border,#e2e8f0)]"></span>
+    </div>
+  )}
+</div>

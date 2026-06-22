@@ -1,0 +1,267 @@
+---
+/**
+ * carousel — Carrousel d'images avec navigation.
+ *
+ * Schema catalog : {
+ *   slides (REQUIS), autoplay?, interval?, loop?, showArrows?, showDots?,
+ *   slidesPerView?, gap?, aspectRatio?, effect?, rounded?, showCaption?
+ * }
+ *
+ * Fonctionnement : piste en scroll-snap CSS (zéro dépendance, swipe natif mobile).
+ * Un script client gère flèches (prev/next), points de pagination (scroll-spy via
+ * IntersectionObserver) et autoplay optionnel. Réinitialisé sur astro:page-load
+ * avec garde dataset.initialized (pattern TableOfContents).
+ *
+ * Slides : tableau d'objets { src, alt?, caption?, href? }.
+ *
+ * Théming : flèches/points via `--bricks-color-*` (surface/text/accent) avec fallbacks.
+ */
+interface Slide {
+  src: string;
+  alt?: string;
+  caption?: string;
+  href?: string;
+}
+
+interface Props {
+  /** Liste des slides. */
+  slides: Slide[];
+  /** Défilement automatique. Défaut : false. */
+  autoplay?: boolean;
+  /** Intervalle autoplay en ms. Défaut : 5000. */
+  interval?: number;
+  /** Boucler en fin de piste. Défaut : true. */
+  loop?: boolean;
+  /** Afficher les flèches. Défaut : true. */
+  showArrows?: boolean;
+  /** Afficher les points de pagination. Défaut : true. */
+  showDots?: boolean;
+  /** Nombre de slides visibles. Défaut : 1. */
+  slidesPerView?: number;
+  /** Espacement entre slides. Défaut : "md". */
+  gap?: 'none' | 'sm' | 'md' | 'lg';
+  /** Ratio des slides. Défaut : "16/9". */
+  aspectRatio?: '16/9' | '4/3' | '1/1' | '3/2' | '21/9' | 'auto';
+  /** Effet de transition. Défaut : "slide". */
+  effect?: 'slide' | 'fade';
+  /** Coins arrondis. Défaut : "md". */
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Afficher les légendes. Défaut : false. */
+  showCaption?: boolean;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  slides = [],
+  autoplay = false,
+  interval = 5000,
+  loop = true,
+  showArrows = true,
+  showDots = true,
+  slidesPerView = 1,
+  gap = 'md',
+  aspectRatio = '16/9',
+  effect = 'slide',
+  rounded = 'md',
+  showCaption = false,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const carouselId = `carousel-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const gapClass = { none: 'gap-0', sm: 'gap-2', md: 'gap-4', lg: 'gap-6' }[gap];
+const roundedClass = {
+  none: 'rounded-none', sm: 'rounded-sm', md: 'rounded-md', lg: 'rounded-lg', xl: 'rounded-xl',
+}[rounded];
+
+// Largeur d'une slide selon slidesPerView (basis flex).
+const perView = Math.max(1, slidesPerView || 1);
+const basisStyle = `flex:0 0 calc((100% - ${(perView - 1)} * var(--carousel-gap, 1rem)) / ${perView})`;
+
+const arrowBtnClass = [
+  'absolute top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center',
+  'rounded-full shadow-md transition',
+  'bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text,#0f172a)]',
+  'hover:bg-[var(--bricks-color-surface-alt,#f1f5f9)]',
+  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bricks-color-accent,#2563eb)]',
+].join(' ');
+---
+<div
+  id={carouselId}
+  class:list={['relative mb-12', customClass]}
+  data-carousel
+  data-autoplay={autoplay ? 'true' : 'false'}
+  data-interval={interval}
+  data-loop={loop ? 'true' : 'false'}
+  {...rest}
+>
+  <div class="relative">
+    <div
+      data-carousel-track
+      class:list={[
+        'flex snap-x snap-mandatory overflow-x-auto scroll-smooth',
+        '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+        gapClass,
+        roundedClass,
+      ]}
+    >
+      {slides.map((slide, i) => {
+        const media = (
+          <img
+            src={slide.src}
+            alt={slide.alt ?? ''}
+            loading={i === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+            class:list={['h-full w-full object-cover', roundedClass]}
+          />
+        );
+        return (
+          <figure
+            data-carousel-slide
+            class:list={['relative m-0 snap-start', effect === 'fade' ? 'transition-opacity duration-500' : '']}
+            style={basisStyle}
+          >
+            <div
+              class:list={['relative w-full overflow-hidden bg-[var(--bricks-color-surface-alt,#f1f5f9)]', roundedClass]}
+              style={aspectRatio !== 'auto' ? `aspect-ratio:${aspectRatio}` : undefined}
+            >
+              {slide.href ? (
+                <a href={slide.href} class="block h-full w-full">{media}</a>
+              ) : (
+                media
+              )}
+            </div>
+            {showCaption && slide.caption && (
+              <figcaption class="mt-2 text-center text-sm text-[var(--bricks-color-text-muted,#475569)]">
+                {slide.caption}
+              </figcaption>
+            )}
+          </figure>
+        );
+      })}
+    </div>
+
+    {showArrows && slides.length > perView && (
+      <>
+        <button
+          type="button"
+          data-carousel-prev
+          aria-label="Slide précédente"
+          class:list={[arrowBtnClass, 'left-2']}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        <button
+          type="button"
+          data-carousel-next
+          aria-label="Slide suivante"
+          class:list={[arrowBtnClass, 'right-2']}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+      </>
+    )}
+  </div>
+
+  {showDots && slides.length > perView && (
+    <div data-carousel-dots class="mt-3 flex justify-center gap-2" role="tablist" aria-label="Pagination du carrousel">
+      {slides.map((_, i) => (
+        <button
+          type="button"
+          data-carousel-dot={i}
+          role="tab"
+          aria-label={`Aller à la slide ${i + 1}`}
+          class="h-2.5 w-2.5 rounded-full bg-[var(--bricks-color-border,#cbd5e1)] transition data-[active=true]:w-5 data-[active=true]:bg-[var(--bricks-color-accent,#2563eb)]"
+        />
+      ))}
+    </div>
+  )}
+</div>
+
+<style>
+  [data-carousel] { --carousel-gap: 1rem; }
+</style>
+
+<script>
+  function setupCarousel(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const track = root.querySelector<HTMLElement>('[data-carousel-track]');
+    if (!track) return;
+    const slides = Array.from(track.querySelectorAll<HTMLElement>('[data-carousel-slide]'));
+    if (slides.length === 0) return;
+
+    const dots = Array.from(root.querySelectorAll<HTMLElement>('[data-carousel-dot]'));
+    const prevBtn = root.querySelector<HTMLButtonElement>('[data-carousel-prev]');
+    const nextBtn = root.querySelector<HTMLButtonElement>('[data-carousel-next]');
+    const loop = root.dataset.loop === 'true';
+    const autoplay = root.dataset.autoplay === 'true';
+    const interval = Number(root.dataset.interval ?? 5000);
+
+    let current = 0;
+
+    const goTo = (index: number) => {
+      const max = slides.length - 1;
+      let target = index;
+      if (target < 0) target = loop ? max : 0;
+      if (target > max) target = loop ? 0 : max;
+      slides[target].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+      current = target;
+    };
+
+    prevBtn?.addEventListener('click', () => goTo(current - 1));
+    nextBtn?.addEventListener('click', () => goTo(current + 1));
+    dots.forEach((dot) => {
+      dot.addEventListener('click', () => goTo(Number(dot.dataset.carouselDot)));
+    });
+
+    const setActive = (index: number) => {
+      current = index;
+      dots.forEach((dot, i) => dot.setAttribute('data-active', String(i === index)));
+    };
+    setActive(0);
+
+    if ('IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            if (entry.isIntersecting) {
+              const idx = slides.indexOf(entry.target as HTMLElement);
+              if (idx >= 0) setActive(idx);
+            }
+          }
+        },
+        { root: track, threshold: 0.6 }
+      );
+      slides.forEach((s) => observer.observe(s));
+    }
+
+    if (autoplay) {
+      let timer = window.setInterval(() => goTo(current + 1), interval);
+      const stop = () => { window.clearInterval(timer); };
+      const start = () => { stop(); timer = window.setInterval(() => goTo(current + 1), interval); };
+      root.addEventListener('mouseenter', stop);
+      root.addEventListener('mouseleave', start);
+      root.addEventListener('focusin', stop);
+      root.addEventListener('focusout', start);
+    }
+  }
+
+  function initAllCarousels() {
+    document.querySelectorAll<HTMLElement>('[data-carousel]').forEach((el) => setupCarousel(el));
+  }
+
+  initAllCarousels();
+  document.addEventListener('astro:page-load', initAllCarousels);
+</script>

@@ -1,0 +1,200 @@
+---
+/**
+ * login-form — Formulaire de connexion.
+ *
+ * Schema catalog : {
+ *   action?, method?, title?, subtitle?, emailLabel?, passwordLabel?,
+ *   emailPlaceholder?, passwordPlaceholder?, submitLabel?, showRemember?,
+ *   rememberLabel?, showForgot?, forgotLabel?, forgotUrl?, showRegister?,
+ *   registerLabel?, registerUrl?, socialProviders?, variant?, error?
+ * }
+ *
+ * <form> natif (email + password) avec validation HTML5 (required, type=email).
+ * Labels liés, "se souvenir de moi" via checkbox, liens mot de passe oublié /
+ * inscription. `socialProviders` rend des boutons de connexion sociale.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour le bouton et
+ * le focus-ring, border/surface/text pour les champs, danger pour l'erreur).
+ */
+interface Props {
+  /** URL de soumission. Défaut : "/login". */
+  action?: string;
+  /** Méthode HTTP. Défaut : "post". */
+  method?: 'post' | 'get';
+  /** Titre du bloc. Défaut : "Connexion". */
+  title?: string;
+  /** Sous-titre. */
+  subtitle?: string;
+  /** Label du champ email. Défaut : "Email". */
+  emailLabel?: string;
+  /** Label du champ mot de passe. Défaut : "Mot de passe". */
+  passwordLabel?: string;
+  /** Placeholder email. Défaut : "votre@email.com". */
+  emailPlaceholder?: string;
+  /** Placeholder mot de passe. */
+  passwordPlaceholder?: string;
+  /** Label du bouton de soumission. Défaut : "Se connecter". */
+  submitLabel?: string;
+  /** Afficher "se souvenir de moi". Défaut : true. */
+  showRemember?: boolean;
+  /** Label "se souvenir de moi". Défaut : "Se souvenir de moi". */
+  rememberLabel?: string;
+  /** Afficher le lien "mot de passe oublié". Défaut : true. */
+  showForgot?: boolean;
+  /** Label du lien oubli. Défaut : "Mot de passe oublié ?". */
+  forgotLabel?: string;
+  /** URL du lien oubli. Défaut : "/forgot-password". */
+  forgotUrl?: string;
+  /** Afficher le lien inscription. Défaut : true. */
+  showRegister?: boolean;
+  /** Label invitation inscription. Défaut : "Pas encore de compte ?". */
+  registerLabel?: string;
+  /** URL inscription. Défaut : "/register". */
+  registerUrl?: string;
+  /** Fournisseurs de connexion sociale. */
+  socialProviders?: string[];
+  /** Variante visuelle. Défaut : "card". */
+  variant?: 'default' | 'card' | 'minimal';
+  /** Message d'erreur global. */
+  error?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  action = '/login',
+  method = 'post',
+  title = 'Connexion',
+  subtitle,
+  emailLabel = 'Email',
+  passwordLabel = 'Mot de passe',
+  emailPlaceholder = 'votre@email.com',
+  passwordPlaceholder,
+  submitLabel = 'Se connecter',
+  showRemember = true,
+  rememberLabel = 'Se souvenir de moi',
+  showForgot = true,
+  forgotLabel = 'Mot de passe oublié ?',
+  forgotUrl = '/forgot-password',
+  showRegister = true,
+  registerLabel = 'Pas encore de compte ?',
+  registerUrl = '/register',
+  socialProviders = [],
+  variant = 'card',
+  error,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const uid = _brickId ?? Math.random().toString(36).slice(2, 8);
+const emailId = `login-email-${uid}`;
+const passwordId = `login-password-${uid}`;
+
+const containerClass = {
+  default: 'mb-6 w-full max-w-md',
+  card: 'mb-6 w-full max-w-md rounded-xl border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] p-6 sm:p-8 shadow-sm',
+  minimal: 'mb-6 w-full max-w-md',
+}[variant];
+
+const labelClass =
+  'mb-1.5 block font-sans text-sm font-semibold tracking-tight text-[var(--bricks-color-text,#0f172a)]';
+const inputClass = [
+  'block w-full rounded-lg border border-[var(--bricks-color-border,#e2e8f0)] px-3.5 py-2.5 text-sm',
+  'bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text,#0f172a)]',
+  'placeholder:text-[var(--bricks-color-text-faint,#94a3b8)] transition-colors duration-150',
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+].join(' ');
+const submitClass = [
+  'w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white',
+  'bg-[var(--bricks-color-accent,#2563eb)] transition-opacity duration-150 hover:opacity-90',
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+].join(' ');
+const linkClass = 'text-[var(--bricks-color-accent,#2563eb)] hover:underline';
+---
+
+<div class={containerClass} {...rest}>
+  {(title || subtitle) && (
+    <div class="mb-6">
+      {title && <h2 class="font-sans text-xl font-extrabold tracking-tight text-[var(--bricks-color-text,#0f172a)]">{title}</h2>}
+      {subtitle && <p class="mt-1 text-sm text-[var(--bricks-color-text-muted,#475569)]">{subtitle}</p>}
+    </div>
+  )}
+
+  {error && (
+    <p role="alert" class="mb-4 rounded-lg border border-[var(--bricks-color-danger,#dc2626)] bg-[var(--bricks-color-danger,#dc2626)]/10 px-3.5 py-2.5 text-sm text-[var(--bricks-color-danger,#dc2626)]">{error}</p>
+  )}
+
+  <form action={action} method={method} class="space-y-4">
+    <div>
+      <label for={emailId} class={labelClass}>{emailLabel}</label>
+      <input
+        type="email"
+        id={emailId}
+        name="email"
+        placeholder={emailPlaceholder}
+        required
+        autocomplete="email"
+        class={inputClass}
+      />
+    </div>
+
+    <div>
+      <label for={passwordId} class={labelClass}>{passwordLabel}</label>
+      <input
+        type="password"
+        id={passwordId}
+        name="password"
+        placeholder={passwordPlaceholder}
+        required
+        autocomplete="current-password"
+        class={inputClass}
+      />
+    </div>
+
+    {(showRemember || showForgot) && (
+      <div class="flex items-center justify-between gap-3 text-sm">
+        {showRemember ? (
+          <label class="inline-flex items-center gap-2 text-[var(--bricks-color-text-muted,#475569)]">
+            <input
+              type="checkbox"
+              name="remember"
+              value="1"
+              class="h-4 w-4 rounded border-[var(--bricks-color-border,#e2e8f0)] text-[var(--bricks-color-accent,#2563eb)] focus-visible:ring-[var(--bricks-color-accent,#2563eb)]"
+            />
+            <span>{rememberLabel}</span>
+          </label>
+        ) : <span />}
+        {showForgot && <a href={forgotUrl} class={linkClass}>{forgotLabel}</a>}
+      </div>
+    )}
+
+    <button type="submit" class={submitClass}>{submitLabel}</button>
+  </form>
+
+  {socialProviders.length > 0 && (
+    <div class="mt-5">
+      <div class="relative my-4 text-center text-xs text-[var(--bricks-color-text-muted,#475569)]">
+        <span class="relative z-10 bg-[var(--bricks-color-surface,#ffffff)] px-2">ou</span>
+        <span class="absolute inset-x-0 top-1/2 -z-0 h-px -translate-y-1/2 bg-[var(--bricks-color-border,#e2e8f0)]"></span>
+      </div>
+      <div class="space-y-2">
+        {socialProviders.map((provider) => (
+          <button
+            type="button"
+            data-provider={provider}
+            class="w-full rounded-lg border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] px-4 py-2.5 text-sm font-medium capitalize text-[var(--bricks-color-text,#0f172a)] transition-colors hover:bg-[var(--bricks-color-muted,#f1f5f9)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]"
+          >
+            Continuer avec {provider}
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {showRegister && (
+    <p class="mt-6 text-center text-sm text-[var(--bricks-color-text-muted,#475569)]">
+      {registerLabel} <a href={registerUrl} class={linkClass}>Créer un compte</a>
+    </p>
+  )}
+</div>

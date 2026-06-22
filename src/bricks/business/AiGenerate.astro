@@ -1,0 +1,70 @@
+---
+/**
+ * ai-generate — Bloc de génération de texte par IA (placeholder, NON câblé).
+ *
+ * Schema catalog : { provider?, model?, prompt, systemPrompt?, temperature?, maxTokens? }
+ *
+ * ⚠️ Cette brique N'APPELLE AUCUN backend / API IA au rendu. La génération à la volée
+ * côté client/serveur n'est pas implémentée dans astro-bricks (pas de clé API, pas de
+ * réseau). La brique rend un placeholder statique et documenté : si un slot `default`
+ * est fourni (contenu pré-généré injecté par l'app), il est affiché ; sinon un fallback
+ * neutre rappelant le prompt configuré est rendu. Les paramètres (provider, model,
+ * temperature…) sont conservés en attributs data-* pour qu'une intégration externe
+ * (script app, build step, edge function) puisse éventuellement les consommer plus tard.
+ *
+ * Théming : consomme `--bricks-color-border`, `--bricks-color-surface`,
+ * `--bricks-color-text-muted` avec fallbacks. Marge basse `mb-6`.
+ */
+interface Props {
+  /** Provider IA (informatif, non câblé). Défaut : "anthropic". */
+  provider?: 'anthropic' | 'openai' | 'mistral';
+  /** Modèle spécifique (informatif). */
+  model?: string;
+  /** Le prompt configuré. */
+  prompt: string;
+  /** Instructions système (informatif). */
+  systemPrompt?: string;
+  /** Créativité 0–2 (informatif). Défaut : 0.7. */
+  temperature?: number;
+  /** Tokens max en sortie (informatif). Défaut : 1024. */
+  maxTokens?: number;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  provider = 'anthropic',
+  model,
+  prompt,
+  systemPrompt,
+  temperature = 0.7,
+  maxTokens = 1024,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const hasSlot = Astro.slots.has('default');
+---
+
+<div
+  class="mb-6 rounded-lg border border-dashed border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] p-5 text-sm"
+  data-brick="ai-generate"
+  data-provider={provider}
+  data-model={model}
+  data-temperature={temperature}
+  data-max-tokens={maxTokens}
+  data-prompt={prompt}
+  data-system-prompt={systemPrompt}
+  {...rest}
+>
+  {hasSlot ? (
+    <slot />
+  ) : (
+    <p class="text-[var(--bricks-color-text-muted,#475569)]">
+      <strong class="font-semibold">Contenu IA non généré.</strong>
+      {' '}Cette brique n'est pas câblée à un backend. Prompt configuré :{' '}
+      <em>« {prompt} »</em> (provider : {provider}{model ? `, ${model}` : ''}).
+    </p>
+  )}
+</div>

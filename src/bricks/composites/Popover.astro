@@ -1,0 +1,290 @@
+---
+/**
+ * popover — Bulle contextuelle au clic.
+ *
+ * Schema catalog : {
+ *   id?, position?, trigger?, title?, arrow?, closeButton?, closeOnClickOutside?,
+ *   width?, variant?, offset?, className?
+ * }
+ *
+ * Fonctionnement : attribut HTML natif `popover` + CSS Anchor Positioning. Le
+ * déclencheur est le slot `trigger`, doté de `popovertarget` (toggle natif au clic).
+ * La bulle est ancrée au déclencheur via `anchor-name` / `position-anchor` ; en
+ * l'absence de support Anchor Positioning, un script de repli positionne la bulle
+ * (getBoundingClientRect). `trigger=hover`/`focus` ajoute l'ouverture/fermeture
+ * programmatique via `showPopover()`/`hidePopover()`. `closeOnClickOutside` est géré
+ * nativement par le mode `popover="auto"` (light-dismiss). Script suivant le pattern
+ * TableOfContents (ré-init `astro:page-load` + guard `dataset.initialized`).
+ *
+ * Théming : variant default = `--bricks-color-surface` + bordure ; dark =
+ * `--bricks-color-text`. Fallbacks fournis.
+ */
+interface Props {
+  /** ID HTML. */
+  id?: string;
+  /** Position. Défaut : "bottom". */
+  position?:
+    | 'top'
+    | 'bottom'
+    | 'left'
+    | 'right'
+    | 'top-start'
+    | 'top-end'
+    | 'bottom-start'
+    | 'bottom-end';
+  /** Déclencheur. Défaut : "click". */
+  trigger?: 'click' | 'hover' | 'focus';
+  /** Titre optionnel du popover. */
+  title?: string;
+  /** Afficher la flèche. Défaut : true. */
+  arrow?: boolean;
+  /** Afficher un bouton de fermeture. Défaut : false. */
+  closeButton?: boolean;
+  /** Fermer au clic extérieur. Défaut : true. */
+  closeOnClickOutside?: boolean;
+  /** Largeur du popover. Défaut : "auto". */
+  width?: 'auto' | 'sm' | 'md' | 'lg';
+  /** Style. Défaut : "default". */
+  variant?: 'default' | 'dark';
+  /** Distance du trigger en pixels. Défaut : 8. */
+  offset?: number;
+  /** Override des classes du popover. */
+  className?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  id,
+  position = 'bottom',
+  trigger = 'click',
+  title,
+  arrow = true,
+  closeButton = false,
+  closeOnClickOutside = true,
+  width = 'auto',
+  variant = 'default',
+  offset = 8,
+  className = '',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const baseId = id || `pop-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+const popoverId = `${baseId}-pop`;
+const anchorName = `--${baseId}-anchor`;
+
+// popover="auto" => light-dismiss (clic extérieur + Escape). "manual" sinon.
+const popoverMode = closeOnClickOutside ? 'auto' : 'manual';
+
+const widthClass = {
+  auto: 'w-max max-w-xs',
+  sm: 'w-48',
+  md: 'w-64',
+  lg: 'w-80',
+}[width];
+
+const variantClass = {
+  default:
+    'bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text,#0f172a)] border border-[var(--bricks-color-border,#e2e8f0)]',
+  dark: 'bg-[var(--bricks-color-text,#0f172a)] text-white border border-transparent',
+}[variant];
+---
+
+<span class="popover-wrap relative inline-flex" data-popover-wrap {...rest}>
+  <span
+    class="popover-trigger inline-flex"
+    data-popover-trigger
+    data-trigger-mode={trigger}
+    style={`anchor-name:${anchorName}`}
+    popovertarget={trigger === 'click' ? popoverId : undefined}
+  >
+    <slot name="trigger" />
+  </span>
+
+  <div
+    id={popoverId}
+    popover={popoverMode}
+    role="dialog"
+    data-popover
+    data-position={position}
+    data-offset={offset}
+    data-trigger-mode={trigger}
+    class:list={[
+      'popover-bubble m-0 rounded-lg p-0 shadow-lg',
+      widthClass,
+      variantClass,
+      className,
+    ]}
+    style={`position-anchor:${anchorName}`}
+  >
+    <div class="relative p-4">
+      {(title || closeButton) && (
+        <div class="mb-2 flex items-start justify-between gap-3">
+          {title && (
+            <p class="font-sans font-extrabold tracking-tight text-sm">{title}</p>
+          )}
+          {closeButton && (
+            <button
+              type="button"
+              data-popover-close
+              aria-label="Fermer"
+              popovertarget={popoverId}
+              popovertargetaction="hide"
+              class="ml-auto rounded text-lg leading-none opacity-60 transition hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              ×
+            </button>
+          )}
+        </div>
+      )}
+      <div class="text-sm leading-snug [&_a]:underline">
+        <slot />
+      </div>
+    </div>
+    {arrow && <span class="popover-arrow" data-variant={variant} aria-hidden="true"></span>}
+  </div>
+</span>
+
+<style>
+  .popover-bubble {
+    inset: auto;
+    overflow: visible;
+    border-width: 1px;
+  }
+
+  /* CSS Anchor Positioning (navigateurs récents) */
+  @supports (anchor-name: --x) {
+    .popover-bubble[data-position='bottom'],
+    .popover-bubble[data-position='bottom-start'],
+    .popover-bubble[data-position='bottom-end'] {
+      top: anchor(bottom);
+      margin-top: 8px;
+    }
+    .popover-bubble[data-position='bottom'] { justify-self: anchor-center; }
+    .popover-bubble[data-position='bottom-start'] { left: anchor(left); }
+    .popover-bubble[data-position='bottom-end'] { right: anchor(right); }
+
+    .popover-bubble[data-position='top'],
+    .popover-bubble[data-position='top-start'],
+    .popover-bubble[data-position='top-end'] {
+      bottom: anchor(top);
+      margin-bottom: 8px;
+    }
+    .popover-bubble[data-position='top'] { justify-self: anchor-center; }
+    .popover-bubble[data-position='top-start'] { left: anchor(left); }
+    .popover-bubble[data-position='top-end'] { right: anchor(right); }
+
+    .popover-bubble[data-position='left'] {
+      right: anchor(left); margin-right: 8px; align-self: anchor-center;
+    }
+    .popover-bubble[data-position='right'] {
+      left: anchor(right); margin-left: 8px; align-self: anchor-center;
+    }
+  }
+
+  .popover-arrow {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border: 6px solid transparent;
+  }
+  .popover-arrow[data-variant='default'] { --pop-arrow: var(--bricks-color-surface, #ffffff); }
+  .popover-arrow[data-variant='dark'] { --pop-arrow: var(--bricks-color-text, #0f172a); }
+
+  .popover-bubble[data-position^='bottom'] .popover-arrow {
+    bottom: 100%; left: 50%; transform: translateX(-50%); border-bottom-color: var(--pop-arrow);
+  }
+  .popover-bubble[data-position^='top'] .popover-arrow {
+    top: 100%; left: 50%; transform: translateX(-50%); border-top-color: var(--pop-arrow);
+  }
+  .popover-bubble[data-position='left'] .popover-arrow {
+    left: 100%; top: 50%; transform: translateY(-50%); border-left-color: var(--pop-arrow);
+  }
+  .popover-bubble[data-position='right'] .popover-arrow {
+    right: 100%; top: 50%; transform: translateY(-50%); border-right-color: var(--pop-arrow);
+  }
+</style>
+
+<script>
+  function supportsAnchor(): boolean {
+    return typeof CSS !== 'undefined' && CSS.supports('anchor-name: --x');
+  }
+
+  function setupPopovers() {
+    document
+      .querySelectorAll<HTMLElement>('[data-popover-wrap]')
+      .forEach((wrap) => {
+        if (wrap.dataset.initialized === 'true') return;
+        wrap.dataset.initialized = 'true';
+
+        const triggerEl = wrap.querySelector<HTMLElement>('[data-popover-trigger]');
+        const bubble = wrap.querySelector<HTMLElement>('[data-popover]');
+        if (!triggerEl || !bubble) return;
+
+        const mode = bubble.dataset.triggerMode || 'click';
+        const offset = Number(bubble.dataset.offset ?? 8);
+
+        const show = () => {
+          // @ts-ignore showPopover existe sur les navigateurs supportant l'API.
+          if (typeof bubble.showPopover === 'function' && !bubble.matches(':popover-open')) {
+            try { (bubble as any).showPopover(); } catch {}
+          }
+        };
+        const hide = () => {
+          // @ts-ignore
+          if (typeof bubble.hidePopover === 'function' && bubble.matches(':popover-open')) {
+            try { (bubble as any).hidePopover(); } catch {}
+          }
+        };
+
+        if (mode === 'hover') {
+          wrap.addEventListener('mouseenter', show);
+          wrap.addEventListener('mouseleave', hide);
+        } else if (mode === 'focus') {
+          triggerEl.addEventListener('focusin', show);
+          wrap.addEventListener('focusout', (e) => {
+            if (!wrap.contains(e.relatedTarget as Node)) hide();
+          });
+        }
+
+        // Repli de positionnement si Anchor Positioning non supporté.
+        if (!supportsAnchor()) {
+          const reposition = () => {
+            if (!bubble.matches(':popover-open')) return;
+            const r = triggerEl.getBoundingClientRect();
+            const b = bubble.getBoundingClientRect();
+            const pos = bubble.dataset.position || 'bottom';
+            let top = 0;
+            let left = 0;
+            if (pos.startsWith('bottom')) {
+              top = r.bottom + offset;
+              left = pos.endsWith('start') ? r.left : pos.endsWith('end') ? r.right - b.width : r.left + (r.width - b.width) / 2;
+            } else if (pos.startsWith('top')) {
+              top = r.top - b.height - offset;
+              left = pos.endsWith('start') ? r.left : pos.endsWith('end') ? r.right - b.width : r.left + (r.width - b.width) / 2;
+            } else if (pos === 'left') {
+              top = r.top + (r.height - b.height) / 2;
+              left = r.left - b.width - offset;
+            } else {
+              top = r.top + (r.height - b.height) / 2;
+              left = r.right + offset;
+            }
+            bubble.style.position = 'fixed';
+            bubble.style.margin = '0';
+            bubble.style.top = `${Math.max(8, top)}px`;
+            bubble.style.left = `${Math.max(8, left)}px`;
+          };
+          bubble.addEventListener('toggle', (e) => {
+            if ((e as ToggleEvent).newState === 'open') reposition();
+          });
+          window.addEventListener('scroll', reposition, { passive: true });
+          window.addEventListener('resize', reposition);
+        }
+      });
+  }
+
+  setupPopovers();
+  document.addEventListener('astro:page-load', setupPopovers);
+</script>

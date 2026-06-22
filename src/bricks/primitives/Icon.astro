@@ -1,0 +1,95 @@
+---
+/**
+ * icon — Icône SVG inline.
+ *
+ * Schema catalog : { name, size?, color?, strokeWidth? }
+ *
+ * Fonctionnement : rend un SVG inline (stroke-based, viewBox 0 0 24 24) tiré d'un set
+ * minimal mappé par `name`. Zéro dépendance, zéro requête réseau. Si `name` est inconnu,
+ * un cercle de fallback discret est rendu pour ne pas casser la mise en page.
+ *
+ * Théming : `color` accepte `currentColor` (défaut, hérite de la couleur de texte
+ * parente), un mot-clé mappé sur une variable `--bricks-color-*`, ou toute valeur CSS
+ * brute (hex, rgb…). Élément inline, aucune marge.
+ */
+interface Props {
+  /** Nom de l'icône (check, chevron-right, chevron-down, arrow-right, star, menu, close, search, plus, minus, external…). */
+  name: string;
+  /** Taille. Défaut : "md". */
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  /** Couleur : currentColor (défaut), mot-clé thème (primary, success…), ou valeur CSS brute. */
+  color?: string;
+  /** Épaisseur du trait. Défaut : 2. */
+  strokeWidth?: number;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  size = 'md',
+  color = 'currentColor',
+  strokeWidth = 2,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const sizePx = { xs: 14, sm: 16, md: 20, lg: 24, xl: 32, '2xl': 40 }[size] ?? 20;
+
+// Mots-clés couleur → variables thème ; sinon valeur brute passée telle quelle.
+const colorKeywords: Record<string, string> = {
+  currentColor: 'currentColor',
+  primary: 'var(--bricks-color-accent,#2563eb)',
+  secondary: 'var(--bricks-color-secondary,#64748b)',
+  success: 'var(--bricks-color-success,#16a34a)',
+  warning: 'var(--bricks-color-warning,#d97706)',
+  danger: 'var(--bricks-color-danger,#dc2626)',
+  muted: 'var(--bricks-color-text-muted,#475569)',
+};
+const colorValue = colorKeywords[color] ?? color;
+
+// Set minimal d'icônes : chaque entrée = le contenu interne du <svg> (paths/shapes).
+// Stroke-based, viewBox 0 0 24 24, line cap/join arrondis.
+const icons: Record<string, string> = {
+  check: '<polyline points="20 6 9 17 4 12"></polyline>',
+  'chevron-right': '<polyline points="9 18 15 12 9 6"></polyline>',
+  'chevron-down': '<polyline points="6 9 12 15 18 9"></polyline>',
+  'chevron-left': '<polyline points="15 18 9 12 15 6"></polyline>',
+  'chevron-up': '<polyline points="18 15 12 9 6 15"></polyline>',
+  'arrow-right': '<line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline>',
+  'arrow-left': '<line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline>',
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>',
+  menu: '<line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="18" x2="21" y2="18"></line>',
+  close: '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>',
+  search: '<circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>',
+  plus: '<line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line>',
+  minus: '<line x1="5" y1="12" x2="19" y2="12"></line>',
+  external: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line>',
+};
+
+const inner = icons[name];
+---
+
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width={sizePx}
+  height={sizePx}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke={colorValue}
+  stroke-width={strokeWidth}
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class="inline-block shrink-0 align-[-0.125em]"
+  role="img"
+  aria-hidden="true"
+  data-icon={name}
+  {...rest}
+>
+  {inner ? (
+    <Fragment set:html={inner} />
+  ) : (
+    <circle cx="12" cy="12" r="9"></circle>
+  )}
+</svg>

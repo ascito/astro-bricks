@@ -1,0 +1,188 @@
+---
+/**
+ * cookie-banner — Bannière de consentement cookies.
+ *
+ * Schema catalog : {
+ *   title?, message?, acceptLabel?, declineLabel?, settingsLabel?, privacyUrl?,
+ *   position?, variant?, showDecline?, showSettings?, cookieName?, cookieExpiry?
+ * }
+ *
+ * Fonctionnement : le serveur rend la bannière. Au chargement, un script client
+ * la masque si un choix de consentement existe déjà (localStorage, clé `cookieName`).
+ * Les clics sur Accepter/Refuser persistent le choix et masquent la bannière.
+ * Zéro dépendance externe, compatible Astro View Transitions.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour le bouton
+ * Accepter, surface/border/text pour le cadre) avec fallbacks. Pas de marge racine
+ * (bannière fixed).
+ */
+interface Props {
+  /** Titre de la bannière. Défaut : "Cookies". */
+  title?: string;
+  /** Message explicatif. */
+  message?: string;
+  /** Libellé du bouton d'acceptation. Défaut : "Accepter". */
+  acceptLabel?: string;
+  /** Libellé du bouton de refus. Défaut : "Refuser". */
+  declineLabel?: string;
+  /** Libellé du bouton paramètres. */
+  settingsLabel?: string;
+  /** URL de la politique de confidentialité. */
+  privacyUrl?: string;
+  /** Position de la bannière. Défaut : "bottom". */
+  position?: 'top' | 'bottom' | 'bottom-left' | 'bottom-right';
+  /** Style d'affichage. Défaut : "bar". */
+  variant?: 'bar' | 'modal' | 'floating';
+  /** Afficher le bouton Refuser. Défaut : true. */
+  showDecline?: boolean;
+  /** Afficher le bouton Paramètres. Défaut : false. */
+  showSettings?: boolean;
+  /** Nom de la clé de consentement (localStorage). Défaut : "cookie_consent". */
+  cookieName?: string;
+  /** Durée de validité en jours (informatif). Défaut : 365. */
+  cookieExpiry?: number;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title = 'Cookies',
+  message = 'Nous utilisons des cookies pour améliorer votre expérience.',
+  acceptLabel = 'Accepter',
+  declineLabel = 'Refuser',
+  settingsLabel,
+  privacyUrl,
+  position = 'bottom',
+  variant = 'bar',
+  showDecline = true,
+  showSettings = false,
+  cookieName = 'cookie_consent',
+  cookieExpiry = 365,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const bannerId = `cookie-banner-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const positionClass: Record<string, string> = {
+  top: 'top-0 inset-x-0',
+  bottom: 'bottom-0 inset-x-0',
+  'bottom-left': 'bottom-4 left-4 max-w-sm',
+  'bottom-right': 'bottom-4 right-4 max-w-sm',
+};
+
+const variantLayout =
+  variant === 'bar'
+    ? 'sm:flex sm:items-center sm:justify-between sm:gap-6'
+    : 'space-y-3';
+
+const containerClass =
+  customClass ??
+  [
+    'fixed z-50 p-5 text-sm shadow-2xl',
+    'border border-[var(--bricks-color-border,#e2e8f0)]',
+    'bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text,#0f172a)]',
+    variant === 'bar' ? '' : 'rounded-2xl',
+    positionClass[position] ?? positionClass.bottom,
+  ]
+    .filter(Boolean)
+    .join(' ');
+---
+
+<aside
+  id={bannerId}
+  class:list={[containerClass]}
+  data-cookie-banner
+  data-cookie-name={cookieName}
+  role="dialog"
+  aria-modal="false"
+  aria-label={title}
+  hidden
+  {...rest}
+>
+  <div class:list={[variantLayout]}>
+    <div class="space-y-1">
+      {title && <p class="font-sans font-extrabold tracking-tight">{title}</p>}
+      <p class="text-[var(--bricks-color-text-muted,#475569)]">
+        {message}
+        {privacyUrl && (
+          <a href={privacyUrl} class="ml-1 underline underline-offset-2 hover:opacity-80">En savoir plus</a>
+        )}
+      </p>
+    </div>
+    <div class="mt-4 flex flex-wrap items-center gap-2 sm:mt-0 sm:shrink-0">
+      {showSettings && settingsLabel && (
+        <button
+          type="button"
+          data-cookie-settings
+          class="rounded-full border border-[var(--bricks-color-border,#cbd5e1)] px-4 py-2 font-semibold text-[var(--bricks-color-text-muted,#475569)] transition hover:border-[var(--bricks-color-accent,#f97316)]"
+        >
+          {settingsLabel}
+        </button>
+      )}
+      {showDecline && (
+        <button
+          type="button"
+          data-cookie-decline
+          class="rounded-full border border-[var(--bricks-color-border,#cbd5e1)] px-4 py-2 font-semibold text-[var(--bricks-color-text-muted,#475569)] transition hover:border-[var(--bricks-color-accent,#f97316)]"
+        >
+          {declineLabel}
+        </button>
+      )}
+      <button
+        type="button"
+        data-cookie-accept
+        class="rounded-full bg-[var(--bricks-color-accent,#f97316)] px-5 py-2 font-semibold text-white transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bricks-color-accent,#f97316)]"
+      >
+        {acceptLabel}
+      </button>
+    </div>
+  </div>
+</aside>
+
+<script>
+  function setupCookieBanner(banner: HTMLElement) {
+    if (banner.dataset.initialized === 'true') return;
+    banner.dataset.initialized = 'true';
+
+    const name = banner.dataset.cookieName || 'cookie_consent';
+
+    let stored: string | null = null;
+    try {
+      stored = localStorage.getItem(name);
+    } catch {}
+
+    if (stored) {
+      banner.hidden = true;
+      return;
+    }
+    banner.hidden = false;
+
+    const persist = (value: 'accepted' | 'declined') => {
+      try {
+        localStorage.setItem(name, value);
+      } catch {}
+      banner.hidden = true;
+    };
+
+    banner
+      .querySelector<HTMLButtonElement>('[data-cookie-accept]')
+      ?.addEventListener('click', () => persist('accepted'));
+    banner
+      .querySelector<HTMLButtonElement>('[data-cookie-decline]')
+      ?.addEventListener('click', () => persist('declined'));
+  }
+
+  function initAllCookieBanners() {
+    document
+      .querySelectorAll<HTMLElement>('[data-cookie-banner]')
+      .forEach((el) => setupCookieBanner(el));
+  }
+
+  initAllCookieBanners();
+  document.addEventListener('astro:page-load', initAllCookieBanners);
+</script>

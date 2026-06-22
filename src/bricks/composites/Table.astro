@@ -1,0 +1,158 @@
+---
+/**
+ * table — Tableau de données (<table> stylée depuis colonnes + lignes).
+ *
+ * Schema catalog : {
+ *   columns (REQUIS)[]{key,label,align?}, rows (REQUIS)[] (objets indexés par key,
+ *   ou tableaux de cellules), variant?, size?, hover?, stickyHeader?, caption?,
+ *   emptyMessage?, responsive?, className?, id?
+ * }
+ *
+ * Fonctionnement : rendu 100% serveur. Les colonnes définissent l'en-tête ; chaque
+ * ligne est soit un objet (cellule = row[col.key]), soit un tableau (cellule par
+ * index). Si aucune ligne, affiche `emptyMessage`. `responsive` ajoute un scroll
+ * horizontal mobile, `stickyHeader` fige l'en-tête.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (surface/border, text/text-muted)
+ * avec fallbacks. Marge racine `mb-12`.
+ */
+interface Column {
+  key?: string;
+  label: string;
+  align?: 'left' | 'center' | 'right';
+}
+type Row = Record<string, unknown> | unknown[];
+interface Props {
+  /** Définition des colonnes. REQUIS. */
+  columns: Column[];
+  /** Données des lignes. REQUIS. */
+  rows: Row[];
+  /** Style. Défaut : "default". */
+  variant?: 'default' | 'striped' | 'bordered' | 'minimal';
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Surligner au survol. Défaut : true. */
+  hover?: boolean;
+  /** En-tête figé au scroll. Défaut : false. */
+  stickyHeader?: boolean;
+  /** Légende du tableau. */
+  caption?: string;
+  /** Message si aucune donnée. Défaut : "Aucune donnée". */
+  emptyMessage?: string;
+  /** Scroll horizontal sur mobile. Défaut : true. */
+  responsive?: boolean;
+  /** Classe additionnelle (depuis schema). */
+  className?: string;
+  /** ID HTML. */
+  id?: string;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  columns,
+  rows,
+  variant = 'default',
+  size = 'md',
+  hover = true,
+  stickyHeader = false,
+  caption,
+  emptyMessage = 'Aucune donnée',
+  responsive = true,
+  className = '',
+  id,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const cellPad =
+  size === 'sm' ? 'px-3 py-2' : size === 'lg' ? 'px-5 py-4' : 'px-4 py-3';
+const textSize = size === 'sm' ? 'text-sm' : 'text-base';
+
+const alignClass = (a?: string) =>
+  a === 'center' ? 'text-center' : a === 'right' ? 'text-right' : 'text-left';
+
+const bordered = variant === 'bordered';
+const striped = variant === 'striped';
+const minimal = variant === 'minimal';
+
+const getCell = (row: Row, col: Column, idx: number): unknown =>
+  Array.isArray(row) ? row[idx] : col.key ? row[col.key] : undefined;
+
+const containerClass =
+  customClass ??
+  ['mb-12 rounded-2xl', minimal ? '' : 'border border-[var(--bricks-color-border,#e2e8f0)]', responsive ? 'overflow-x-auto' : 'overflow-hidden', className]
+    .filter(Boolean)
+    .join(' ');
+---
+
+<div id={id} class:list={[containerClass]} {...rest}>
+  <table class:list={['w-full', textSize]}>
+    {caption && (
+      <caption class="px-4 py-3 text-left text-sm font-medium text-[var(--bricks-color-text-muted,#475569)]">
+        {caption}
+      </caption>
+    )}
+    <thead
+      class:list={[
+        stickyHeader ? 'sticky top-0 z-10' : '',
+        'bg-[var(--bricks-color-surface-alt,#f8fafc)]',
+      ]}
+    >
+      <tr>
+        {columns.map((col) => (
+          <th
+            scope="col"
+            class:list={[
+              cellPad,
+              alignClass(col.align),
+              'font-sans font-extrabold tracking-tight text-[var(--bricks-color-text,#0f172a)]',
+              'border-b border-[var(--bricks-color-border,#e2e8f0)]',
+              bordered ? 'border-r last:border-r-0 border-[var(--bricks-color-border,#e2e8f0)]' : '',
+            ]}
+          >
+            {col.label}
+          </th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.length === 0 ? (
+        <tr>
+          <td
+            colspan={columns.length}
+            class:list={[cellPad, 'text-center text-[var(--bricks-color-text-muted,#475569)]']}
+          >
+            {emptyMessage}
+          </td>
+        </tr>
+      ) : (
+        rows.map((row, rIdx) => (
+          <tr
+            class:list={[
+              striped && rIdx % 2 === 1 ? 'bg-[var(--bricks-color-surface-alt,#f8fafc)]' : 'bg-[var(--bricks-color-surface,#ffffff)]',
+              hover ? 'transition hover:bg-[var(--bricks-color-surface-alt,#f1f5f9)]' : '',
+              !minimal ? 'border-b border-[var(--bricks-color-border,#e2e8f0)] last:border-b-0' : 'border-b border-[var(--bricks-color-border,#f1f5f9)] last:border-b-0',
+            ]}
+          >
+            {columns.map((col, cIdx) => (
+              <td
+                class:list={[
+                  cellPad,
+                  alignClass(col.align),
+                  'text-[var(--bricks-color-text-muted,#475569)]',
+                  bordered ? 'border-r last:border-r-0 border-[var(--bricks-color-border,#e2e8f0)]' : '',
+                ]}
+                set:html={String(getCell(row, col, cIdx) ?? '')}
+              />
+            ))}
+          </tr>
+        ))
+      )}
+    </tbody>
+  </table>
+</div>

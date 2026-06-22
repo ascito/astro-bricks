@@ -1,0 +1,194 @@
+---
+/**
+ * form-field — Champ de formulaire avec label, aide et erreur.
+ *
+ * Schema catalog : {
+ *   label, name, type?, placeholder?, value?, bind?, required?, disabled?,
+ *   readonly?, error?, hint?, options?, rows?, min?, max?, pattern?,
+ *   autocomplete?, className?, id?
+ * }
+ *
+ * Rend un <label> lié + le contrôle adapté au `type` : <select> (avec `options`),
+ * <textarea> (avec `rows`), sinon <input> natif (text/email/password/tel/url/
+ * number/date/time/datetime-local). Validation déléguée au HTML5 (required,
+ * pattern, min/max). `error` affiche un message lié via aria-describedby.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour le focus-ring,
+ * border/surface/text pour le contrôle, danger pour l'erreur) avec fallbacks.
+ */
+interface FieldOption {
+  value: string;
+  label?: string;
+}
+
+interface Props {
+  /** Label du champ. REQUIS. */
+  label: string;
+  /** Nom du champ (attribut name). REQUIS. */
+  name: string;
+  /** Type de contrôle. Défaut : "text". */
+  type?:
+    | 'text'
+    | 'email'
+    | 'password'
+    | 'tel'
+    | 'url'
+    | 'number'
+    | 'date'
+    | 'time'
+    | 'datetime-local'
+    | 'select'
+    | 'textarea';
+  /** Texte indicatif. Défaut : "". */
+  placeholder?: string;
+  /** Valeur initiale. Défaut : "". */
+  value?: string;
+  /** Chemin binding. Génère data-value. */
+  bind?: string;
+  /** Champ obligatoire. Défaut : false. */
+  required?: boolean;
+  /** Champ désactivé. Défaut : false. */
+  disabled?: boolean;
+  /** Champ en lecture seule. Défaut : false. */
+  readonly?: boolean;
+  /** Message d'erreur à afficher. */
+  error?: string;
+  /** Texte d'aide sous le champ. */
+  hint?: string;
+  /** Options pour select. Défaut : []. */
+  options?: (FieldOption | string)[];
+  /** Nombre de lignes pour textarea. Défaut : 3. */
+  rows?: number;
+  /** Valeur min (input number/date/time). */
+  min?: string;
+  /** Valeur max (input number/date/time). */
+  max?: string;
+  /** Motif de validation (regex). */
+  pattern?: string;
+  /** Autocomplétion. */
+  autocomplete?: string;
+  /** Classes additionnelles du conteneur racine. Défaut : "". */
+  className?: string;
+  /** ID HTML du contrôle. */
+  id?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  label,
+  name,
+  type = 'text',
+  placeholder = '',
+  value = '',
+  bind,
+  required = false,
+  disabled = false,
+  readonly = false,
+  error,
+  hint,
+  options = [],
+  rows = 3,
+  min,
+  max,
+  pattern,
+  autocomplete,
+  className = '',
+  id,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const fieldId = id ?? `field-${name}-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+const errorId = `${fieldId}-error`;
+const hintId = `${fieldId}-hint`;
+const describedBy = [error ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined;
+
+const labelClass =
+  'mb-1.5 block font-sans text-sm font-semibold tracking-tight text-[var(--bricks-color-text,#0f172a)]';
+
+const controlBase = [
+  'block w-full rounded-lg border px-3.5 py-2.5 text-sm',
+  'bg-[var(--bricks-color-surface,#ffffff)]',
+  'text-[var(--bricks-color-text,#0f172a)]',
+  'placeholder:text-[var(--bricks-color-text-faint,#94a3b8)]',
+  'transition-colors duration-150',
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1',
+  'focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+  'disabled:cursor-not-allowed disabled:opacity-60',
+  error
+    ? 'border-[var(--bricks-color-danger,#dc2626)]'
+    : 'border-[var(--bricks-color-border,#e2e8f0)]',
+].join(' ');
+
+const normalizedOptions = options.map((o) =>
+  typeof o === 'string' ? { value: o, label: o } : { value: o.value, label: o.label ?? o.value }
+);
+---
+
+<div class={['mb-6', className].filter(Boolean).join(' ')} {...rest}>
+  <label for={fieldId} class={labelClass}>
+    {label}
+    {required && <span aria-hidden="true" class="text-[var(--bricks-color-danger,#dc2626)]"> *</span>}
+  </label>
+
+  {type === 'select' ? (
+    <select
+      id={fieldId}
+      name={name}
+      required={required || undefined}
+      disabled={disabled || undefined}
+      aria-invalid={error ? 'true' : undefined}
+      aria-describedby={describedBy}
+      data-value={bind ? value : undefined}
+      class={controlBase}
+    >
+      {placeholder && <option value="" disabled selected={!value}>{placeholder}</option>}
+      {normalizedOptions.map((o) => (
+        <option value={o.value} selected={value === o.value}>{o.label}</option>
+      ))}
+    </select>
+  ) : type === 'textarea' ? (
+    <textarea
+      id={fieldId}
+      name={name}
+      placeholder={placeholder}
+      rows={rows}
+      required={required || undefined}
+      disabled={disabled || undefined}
+      readonly={readonly || undefined}
+      autocomplete={autocomplete}
+      aria-invalid={error ? 'true' : undefined}
+      aria-describedby={describedBy}
+      data-value={bind ? value : undefined}
+      class={controlBase}
+    >{value}</textarea>
+  ) : (
+    <input
+      type={type}
+      id={fieldId}
+      name={name}
+      placeholder={placeholder}
+      value={value}
+      min={min}
+      max={max}
+      pattern={pattern}
+      required={required || undefined}
+      disabled={disabled || undefined}
+      readonly={readonly || undefined}
+      autocomplete={autocomplete}
+      aria-invalid={error ? 'true' : undefined}
+      aria-describedby={describedBy}
+      data-value={bind ? value : undefined}
+      class={controlBase}
+    />
+  )}
+
+  {hint && !error && (
+    <p id={hintId} class="mt-1.5 text-xs text-[var(--bricks-color-text-muted,#475569)]">{hint}</p>
+  )}
+  {error && (
+    <p id={errorId} class="mt-1.5 text-xs font-medium text-[var(--bricks-color-danger,#dc2626)]">{error}</p>
+  )}
+</div>

@@ -1,0 +1,107 @@
+---
+/**
+ * seo — Balises SEO et meta tags (à injecter dans le <head>).
+ * Schema catalog : {
+ *   title (REQUIS), description?, keywords?, canonical?,
+ *   robots?, openGraph?, twitter?, jsonLd?
+ * }
+ *
+ * Couvre : title, description, keywords, canonical, robots, Open Graph,
+ * Twitter Cards, JSON-LD. Brique générique pilotée par le schema catalog
+ * (variante légère de SeoHead, sans dépendance au SiteConfig).
+ */
+interface OpenGraph {
+  title?: string;
+  description?: string;
+  type?: string;
+  url?: string;
+  image?: string;
+  imageAlt?: string;
+  siteName?: string;
+  locale?: string;
+}
+
+interface TwitterMeta {
+  card?: 'summary' | 'summary_large_image' | 'app' | 'player';
+  site?: string;
+  creator?: string;
+  title?: string;
+  description?: string;
+  image?: string;
+}
+
+interface Props {
+  /** Titre de la page. REQUIS. */
+  title: string;
+  /** Meta description. */
+  description?: string;
+  /** Mots-clés. */
+  keywords?: string[];
+  /** URL canonique. */
+  canonical?: string;
+  /** Directive robots. Défaut : "index, follow". */
+  robots?: string;
+  /** Données Open Graph. */
+  openGraph?: OpenGraph;
+  /** Données Twitter Card. */
+  twitter?: TwitterMeta;
+  /** Données structurées JSON-LD. */
+  jsonLd?: Record<string, unknown>;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title,
+  description,
+  keywords,
+  canonical,
+  robots = 'index, follow',
+  openGraph,
+  twitter,
+  jsonLd,
+} = Astro.props;
+
+const og = openGraph ?? {};
+const tw = twitter ?? {};
+
+const ogTitle = og.title ?? title;
+const ogDescription = og.description ?? description;
+const twCard = tw.card ?? 'summary_large_image';
+const twImage = tw.image ?? og.image;
+const twTitle = tw.title ?? ogTitle;
+const twDescription = tw.description ?? ogDescription;
+---
+
+<title>{title}</title>
+{description && <meta name="description" content={description} />}
+{keywords && keywords.length > 0 && (
+  <meta name="keywords" content={keywords.join(', ')} />
+)}
+{canonical && <link rel="canonical" href={canonical} />}
+<meta name="robots" content={robots} />
+
+{/* Open Graph */}
+<meta property="og:title" content={ogTitle} />
+{ogDescription && <meta property="og:description" content={ogDescription} />}
+<meta property="og:type" content={og.type ?? 'website'} />
+{(og.url ?? canonical) && (
+  <meta property="og:url" content={og.url ?? canonical} />
+)}
+{og.image && <meta property="og:image" content={og.image} />}
+{og.imageAlt && <meta property="og:image:alt" content={og.imageAlt} />}
+{og.siteName && <meta property="og:site_name" content={og.siteName} />}
+{og.locale && <meta property="og:locale" content={og.locale} />}
+
+{/* Twitter Card */}
+<meta name="twitter:card" content={twCard} />
+{tw.site && <meta name="twitter:site" content={tw.site} />}
+{tw.creator && <meta name="twitter:creator" content={tw.creator} />}
+<meta name="twitter:title" content={twTitle} />
+{twDescription && <meta name="twitter:description" content={twDescription} />}
+{twImage && <meta name="twitter:image" content={twImage} />}
+
+{/* JSON-LD */}
+{jsonLd && (
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+)}

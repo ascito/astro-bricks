@@ -1,0 +1,111 @@
+---
+/**
+ * audio — Lecteur audio avec contrôles.
+ *
+ * Schema catalog : {
+ *   src (REQUIS), title?, artist?, cover?, autoplay?, loop?, muted?,
+ *   controls?, preload?, variant?
+ * }
+ *
+ * Fonctionnement : <audio> natif HTML, zéro dépendance externe. Selon `variant`,
+ * on enveloppe le lecteur dans une coquille (cover + titre + artiste) :
+ *  - minimal : juste le <audio>
+ *  - default : titre + artiste au-dessus du lecteur
+ *  - full    : cover à gauche, titre/artiste + lecteur à droite
+ *
+ * Théming : consomme les variables `--bricks-color-*` (surface/border pour le
+ * cadre, text/text-muted pour les libellés) avec fallbacks.
+ */
+interface Props {
+  /** URL du fichier audio. */
+  src: string;
+  /** Titre du morceau. */
+  title?: string;
+  /** Artiste / interprète. */
+  artist?: string;
+  /** URL de l'image de couverture (variant full). */
+  cover?: string;
+  /** Lecture automatique. Défaut : false. */
+  autoplay?: boolean;
+  /** Lecture en boucle. Défaut : false. */
+  loop?: boolean;
+  /** Démarrer en sourdine. Défaut : false. */
+  muted?: boolean;
+  /** Afficher les contrôles natifs. Défaut : true. */
+  controls?: boolean;
+  /** Stratégie de préchargement. Défaut : "metadata". */
+  preload?: 'none' | 'metadata' | 'auto';
+  /** Habillage du lecteur. Défaut : "default". */
+  variant?: 'default' | 'minimal' | 'full';
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  src,
+  title,
+  artist,
+  cover,
+  autoplay = false,
+  loop = false,
+  muted = false,
+  controls = true,
+  preload = 'metadata',
+  variant = 'default',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const hasMeta = Boolean(title || artist);
+
+const labelClass = 'font-sans font-extrabold tracking-tight text-[var(--bricks-color-text,#0f172a)]';
+const artistClass = 'text-sm text-[var(--bricks-color-text-muted,#475569)]';
+
+const cardClass =
+  'rounded-lg border p-4 border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)]';
+
+const audioEl = (
+  <audio
+    src={src}
+    controls={controls}
+    autoplay={autoplay}
+    loop={loop}
+    muted={muted}
+    preload={preload}
+    class="w-full"
+    aria-label={title ?? 'Lecteur audio'}
+  >
+    Votre navigateur ne supporte pas l'élément audio.
+  </audio>
+);
+---
+{variant === 'minimal' ? (
+  <div class:list={['mb-12', customClass]} {...rest}>{audioEl}</div>
+) : variant === 'full' ? (
+  <div class:list={['mb-12 flex items-center gap-4', cardClass, customClass]} {...rest}>
+    {cover && (
+      <img
+        src={cover}
+        alt={title ? `Pochette : ${title}` : ''}
+        loading="lazy"
+        decoding="async"
+        class="h-20 w-20 flex-shrink-0 rounded-md object-cover"
+      />
+    )}
+    <div class="min-w-0 flex-1">
+      {title && <p class={`mb-0.5 truncate ${labelClass}`}>{title}</p>}
+      {artist && <p class={`mb-2 truncate ${artistClass}`}>{artist}</p>}
+      {audioEl}
+    </div>
+  </div>
+) : (
+  <div class:list={['mb-12', hasMeta ? cardClass : '', customClass]} {...rest}>
+    {title && <p class={`mb-0.5 ${labelClass}`}>{title}</p>}
+    {artist && <p class={`mb-2 ${artistClass}`}>{artist}</p>}
+    {audioEl}
+  </div>
+)}

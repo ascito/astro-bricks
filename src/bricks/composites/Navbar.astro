@@ -1,0 +1,252 @@
+---
+/**
+ * navbar — Barre de navigation horizontale (logo + items + actions), responsive.
+ *
+ * Schema catalog : {
+ *   logo? {text?, src?, href?}, items? [{label, href, active?}],
+ *   actions? [{label, href, variant?}], variant?, colorScheme?,
+ *   sticky?, breakpoint?, alignment?
+ * }
+ *
+ * Fonctionnement : <header><nav> rendu côté serveur. Sur mobile (< breakpoint),
+ * les items + actions sont masqués derrière un bouton burger qui ouvre/ferme un
+ * panneau (toggle via petit script client, ARIA expanded). Au-delà du breakpoint,
+ * la barre est horizontale. Zéro dépendance externe, compatible View Transitions.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (surface/border/accent) avec fallbacks.
+ */
+interface LogoInput {
+  text?: string;
+  src?: string;
+  href?: string;
+}
+interface NavItem {
+  label: string;
+  href: string;
+  active?: boolean;
+}
+interface ActionItem {
+  label: string;
+  href: string;
+  variant?: 'primary' | 'secondary' | 'outline';
+}
+
+interface Props {
+  /** Logo (texte et/ou image + lien). Défaut : { text: 'Logo', href: '/' }. */
+  logo?: LogoInput;
+  /** Items de navigation. */
+  items?: NavItem[];
+  /** Boutons d'action (CTA). */
+  actions?: ActionItem[];
+  /** Style de fond. Défaut : 'solid'. */
+  variant?: 'solid' | 'transparent' | 'blur';
+  /** Schéma de couleur. Défaut : 'light'. */
+  colorScheme?: 'light' | 'dark';
+  /** Comportement collant. Défaut : 'none'. */
+  sticky?: 'none' | 'top' | 'scroll';
+  /** Breakpoint de bascule mobile/desktop. Défaut : 'md'. */
+  breakpoint?: 'sm' | 'md' | 'lg';
+  /** Alignement des items. Défaut : 'spread'. */
+  alignment?: 'left' | 'center' | 'spread';
+  /** Label accessible de la navigation. Défaut : 'Navigation principale'. */
+  ariaLabel?: string;
+  /** Classes additionnelles. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  logo = { text: 'Logo', href: '/' },
+  items = [],
+  actions = [],
+  variant = 'solid',
+  colorScheme = 'light',
+  sticky = 'none',
+  breakpoint = 'md',
+  alignment = 'spread',
+  ariaLabel = 'Navigation principale',
+  class: customClass = '',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const navId = `navbar-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+const isDark = colorScheme === 'dark';
+
+// Classes responsives par breakpoint (la nav passe en horizontal à partir d'ici).
+const BP_FLEX: Record<string, string> = { sm: 'sm:flex', md: 'md:flex', lg: 'lg:flex' };
+const BP_HIDDEN: Record<string, string> = { sm: 'sm:hidden', md: 'md:hidden', lg: 'lg:hidden' };
+const desktopShow = BP_FLEX[breakpoint] ?? BP_FLEX.md; // hidden md:flex
+const mobileShow = BP_HIDDEN[breakpoint] ?? BP_HIDDEN.md; // burger: md:hidden
+
+const VARIANT_BG: Record<string, string> = {
+  solid: 'bg-[var(--bricks-color-surface,#ffffff)]',
+  transparent: 'bg-transparent',
+  blur: 'bg-[var(--bricks-color-surface,#ffffff)]/80 backdrop-blur',
+};
+
+const textMain = isDark ? 'text-white' : 'text-[var(--bricks-color-text,#0f172a)]';
+const linkColor = isDark ? 'text-white/80 hover:text-white' : 'text-[var(--bricks-color-text-muted,#475569)] hover:text-[var(--bricks-color-text,#0f172a)]';
+const linkActive = 'text-[var(--bricks-color-accent,#2563eb)] font-semibold';
+
+const stickyClass = sticky === 'none' ? '' : 'sticky top-0 z-40';
+
+const ALIGN: Record<string, string> = {
+  left: 'justify-start gap-8',
+  center: 'justify-center gap-8',
+  spread: 'justify-between',
+};
+
+function actionClass(v?: string) {
+  return {
+    primary: 'bg-[var(--bricks-color-accent,#2563eb)] text-white hover:opacity-90',
+    secondary: 'bg-[var(--bricks-color-muted,#f1f5f9)] text-[var(--bricks-color-text,#0f172a)] hover:opacity-90',
+    outline: 'border border-[var(--bricks-color-accent,#2563eb)] text-[var(--bricks-color-accent,#2563eb)] hover:bg-[var(--bricks-color-muted,#f1f5f9)]',
+  }[v ?? 'primary'];
+}
+---
+<header
+  class:list={[
+    VARIANT_BG[variant],
+    variant !== 'transparent' ? 'border-b border-[var(--bricks-color-border,#e2e8f0)]' : '',
+    stickyClass,
+    customClass,
+  ]}
+  data-navbar
+>
+  <nav
+    id={navId}
+    aria-label={ariaLabel}
+    class:list={['mx-auto flex max-w-7xl items-center px-4 py-3', ALIGN[alignment]]}
+  >
+    <a href={logo?.href ?? '/'} class:list={['flex items-center gap-2 font-sans font-extrabold tracking-tight text-lg', textMain]}>
+      {logo?.src && <img src={logo.src} alt={logo?.text ?? 'Logo'} class="h-8 w-auto" height="32" />}
+      {logo?.text && <span>{logo.text}</span>}
+    </a>
+
+    {/* Desktop : items + actions inline */}
+    <div class:list={['hidden items-center gap-6', desktopShow, alignment === 'spread' ? '' : 'ml-8']}>
+      {items.length > 0 && (
+        <ul class="flex items-center gap-6 text-sm">
+          {items.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                aria-current={item.active ? 'page' : undefined}
+                class:list={['transition-colors', item.active ? linkActive : linkColor]}
+              >{item.label}</a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {actions.length > 0 && (
+        <div class="flex items-center gap-2">
+          {actions.map((a) => (
+            <a href={a.href} class:list={['rounded-lg px-4 py-2 text-sm font-semibold transition', actionClass(a.variant)]}>
+              {a.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+
+    {/* Mobile : bouton burger */}
+    {(items.length > 0 || actions.length > 0) && (
+      <button
+        type="button"
+        class:list={['inline-flex items-center justify-center rounded-lg p-2', mobileShow, textMain]}
+        data-navbar-toggle
+        aria-expanded="false"
+        aria-controls={`${navId}-panel`}
+        aria-label="Ouvrir le menu"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" data-icon-open>
+          <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" data-icon-close hidden>
+          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    )}
+  </nav>
+
+  {/* Mobile : panneau déroulant */}
+  {(items.length > 0 || actions.length > 0) && (
+    <div
+      id={`${navId}-panel`}
+      class:list={[mobileShow, 'border-t border-[var(--bricks-color-border,#e2e8f0)] px-4 py-4', VARIANT_BG[variant]]}
+      data-navbar-panel
+      hidden
+    >
+      {items.length > 0 && (
+        <ul class="flex flex-col gap-1 text-sm">
+          {items.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                aria-current={item.active ? 'page' : undefined}
+                class:list={['block rounded-lg px-3 py-2 transition-colors', item.active ? linkActive : linkColor]}
+              >{item.label}</a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {actions.length > 0 && (
+        <div class="mt-3 flex flex-col gap-2">
+          {actions.map((a) => (
+            <a href={a.href} class:list={['block rounded-lg px-4 py-2 text-center text-sm font-semibold transition', actionClass(a.variant)]}>
+              {a.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+</header>
+
+<script>
+  function setupNavbar(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const toggle = root.querySelector<HTMLButtonElement>('[data-navbar-toggle]');
+    const panel = root.querySelector<HTMLElement>('[data-navbar-panel]');
+    if (!toggle || !panel) return;
+
+    const iconOpen = toggle.querySelector<HTMLElement>('[data-icon-open]');
+    const iconClose = toggle.querySelector<HTMLElement>('[data-icon-close]');
+
+    function setOpen(open: boolean) {
+      panel.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+      if (iconOpen) iconOpen.hidden = open;
+      if (iconClose) iconClose.hidden = !open;
+    }
+
+    toggle.addEventListener('click', () => {
+      setOpen(panel.hidden);
+    });
+
+    // Ferme le panneau au clic sur un lien.
+    panel.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) setOpen(false);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !panel.hidden) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+  }
+
+  function initAllNavbars() {
+    document.querySelectorAll<HTMLElement>('[data-navbar]').forEach((el) => setupNavbar(el));
+  }
+
+  initAllNavbars();
+  document.addEventListener('astro:page-load', initAllNavbars);
+</script>

@@ -1,0 +1,174 @@
+---
+/**
+ * dropdown — Menu déroulant.
+ *
+ * Schema catalog : { items: [{label, href?, icon?, divider?, disabled?}], position?,
+ *   trigger?, size?, width?, closeOnSelect?, className? }
+ *
+ * Trigger via le slot par défaut (bouton/élément déclencheur). Le menu s'ouvre au
+ * clic (ou survol si trigger=hover). Fermeture au clic extérieur, Escape, ou sélection.
+ * Script client idempotent + ré-init sur astro:page-load (pattern TableOfContents).
+ */
+interface DropdownItem {
+  label: string;
+  href?: string;
+  icon?: string;
+  divider?: boolean;
+  disabled?: boolean;
+}
+
+interface Props {
+  id?: string;
+  items: DropdownItem[];
+  position?: 'bottom-start' | 'bottom-end' | 'top-start' | 'top-end' | 'left' | 'right';
+  trigger?: 'click' | 'hover';
+  size?: 'sm' | 'md' | 'lg';
+  width?: 'auto' | 'trigger' | 'sm' | 'md' | 'lg';
+  closeOnSelect?: boolean;
+  className?: string;
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  id,
+  items = [],
+  position = 'bottom-start',
+  trigger = 'click',
+  size = 'md',
+  width = 'auto',
+  closeOnSelect = true,
+  className = '',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const ddId = id ?? `dd-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const posClass = {
+  'bottom-start': 'top-full left-0 mt-1',
+  'bottom-end': 'top-full right-0 mt-1',
+  'top-start': 'bottom-full left-0 mb-1',
+  'top-end': 'bottom-full right-0 mb-1',
+  left: 'right-full top-0 mr-1',
+  right: 'left-full top-0 ml-1',
+}[position];
+
+const sizeClass = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' }[size];
+
+const widthClass = {
+  auto: 'min-w-[12rem]',
+  trigger: 'w-full',
+  sm: 'w-40',
+  md: 'w-56',
+  lg: 'w-72',
+}[width];
+---
+
+<div
+  class:list={['relative inline-block mb-6', customClass, className]}
+  data-dropdown
+  data-trigger={trigger}
+  data-close-on-select={closeOnSelect ? 'true' : 'false'}
+  id={ddId}
+  {...rest}
+>
+  <div data-dropdown-trigger aria-haspopup="true" aria-expanded="false" aria-controls={`${ddId}-menu`}>
+    <slot />
+  </div>
+  <div
+    id={`${ddId}-menu`}
+    data-dropdown-menu
+    role="menu"
+    hidden
+    class:list={[
+      'absolute z-30 rounded-lg border p-1 shadow-lg',
+      'border-[var(--bricks-color-border,#e2e8f0)]',
+      'bg-[var(--bricks-color-surface,#ffffff)]',
+      sizeClass,
+      widthClass,
+      posClass,
+    ]}
+  >
+    {items.map((item) =>
+      item.divider ? (
+        <div class="my-1 h-px bg-[var(--bricks-color-border,#e2e8f0)]" role="separator"></div>
+      ) : (
+        <a
+          href={item.disabled ? undefined : (item.href ?? '#')}
+          role="menuitem"
+          aria-disabled={item.disabled ? 'true' : undefined}
+          tabindex={item.disabled ? -1 : 0}
+          data-dropdown-item
+          class:list={[
+            'flex items-center gap-2 rounded px-3 py-2 no-underline transition-colors',
+            item.disabled
+              ? 'cursor-not-allowed text-[var(--bricks-color-text-faint,#94a3b8)]'
+              : 'text-[var(--bricks-color-text,#0f172a)] hover:bg-[var(--bricks-color-surface-muted,#f1f5f9)]',
+          ]}
+        >
+          {item.icon && <span aria-hidden="true">{item.icon}</span>}
+          <span>{item.label}</span>
+        </a>
+      )
+    )}
+  </div>
+</div>
+
+<script>
+  function setupDropdown(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const trigger = root.querySelector<HTMLElement>('[data-dropdown-trigger]');
+    const menu = root.querySelector<HTMLElement>('[data-dropdown-menu]');
+    if (!trigger || !menu) return;
+    const mode = root.dataset.trigger || 'click';
+    const closeOnSelect = root.dataset.closeOnSelect === 'true';
+
+    const open = () => {
+      menu.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+    };
+    const close = () => {
+      menu.hidden = true;
+      trigger.setAttribute('aria-expanded', 'false');
+    };
+    const toggle = () => (menu.hidden ? open() : close());
+
+    if (mode === 'hover') {
+      root.addEventListener('mouseenter', open);
+      root.addEventListener('mouseleave', close);
+    } else {
+      trigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggle();
+      });
+    }
+
+    if (closeOnSelect) {
+      menu.querySelectorAll('[data-dropdown-item]').forEach((item) =>
+        item.addEventListener('click', () => close())
+      );
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!root.contains(e.target as Node)) close();
+    });
+    root.addEventListener('keydown', (e) => {
+      if ((e as KeyboardEvent).key === 'Escape') close();
+    });
+  }
+
+  function initAllDropdowns() {
+    document
+      .querySelectorAll<HTMLElement>('[data-dropdown]')
+      .forEach((el) => setupDropdown(el));
+  }
+
+  initAllDropdowns();
+  document.addEventListener('astro:page-load', initAllDropdowns);
+</script>

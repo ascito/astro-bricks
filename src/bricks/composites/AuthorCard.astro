@@ -1,0 +1,155 @@
+---
+/**
+ * author-card — Carte auteur avec bio et liens.
+ *
+ * Schema catalog : {
+ *   name (REQUIS), avatar?, role?, bio?, email?, website?,
+ *   social? [{platform/label, href, icon?}], variant?, showSocial?
+ * }
+ *
+ * Théming : consomme les variables `--bricks-color-*` (surface/border pour le cadre,
+ * text/text-muted pour le corps, accent pour les liens) avec fallbacks.
+ */
+interface SocialLink {
+  /** Plateforme / label affiché (ex: "Twitter"). */
+  platform?: string;
+  label?: string;
+  /** URL du lien. */
+  href: string;
+  /** Emoji/glyphe optionnel. */
+  icon?: string;
+}
+
+interface Props {
+  /** Nom de l'auteur. */
+  name: string;
+  /** URL de l'avatar. */
+  avatar?: string;
+  /** Rôle / fonction. */
+  role?: string;
+  /** Biographie courte. */
+  bio?: string;
+  /** Adresse e-mail (génère un lien mailto). */
+  email?: string;
+  /** Site web. */
+  website?: string;
+  /** Liens sociaux. */
+  social?: SocialLink[];
+  /** Style. Défaut : 'default'. */
+  variant?: 'default' | 'horizontal' | 'compact' | 'detailed';
+  /** Afficher les liens sociaux. Défaut : true. */
+  showSocial?: boolean;
+  /** Classes additionnelles sur la racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  avatar,
+  role,
+  bio,
+  email,
+  website,
+  social = [],
+  variant = 'default',
+  showSocial = true,
+  class: customClass = '',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const horizontal = variant === 'horizontal' || variant === 'compact';
+const compact = variant === 'compact';
+
+const initials = name
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 2)
+  .map((w) => w[0]?.toUpperCase() ?? '')
+  .join('');
+
+const avatarSize = compact ? 'h-12 w-12 text-base' : 'h-16 w-16 text-xl';
+const links = showSocial ? social.filter((s) => s && s.href) : [];
+---
+<article
+  data-brick="author-card"
+  class:list={[
+    'mb-12 rounded-2xl border p-6',
+    'border-[var(--bricks-color-border,#e2e8f0)]',
+    'bg-[var(--bricks-color-surface,#ffffff)]',
+    horizontal ? 'flex items-start gap-5' : 'flex flex-col items-center text-center gap-3',
+    customClass,
+  ]}
+  {...rest}
+>
+  {avatar ? (
+    <img
+      src={avatar}
+      alt={name}
+      loading="lazy"
+      decoding="async"
+      width="128"
+      height="128"
+      class:list={[avatarSize, 'flex-shrink-0 rounded-full object-cover']}
+    />
+  ) : (
+    <span
+      aria-hidden="true"
+      class:list={[
+        avatarSize,
+        'flex flex-shrink-0 items-center justify-center rounded-full font-sans font-extrabold',
+        'bg-[var(--bricks-color-muted,#f1f5f9)] text-[var(--bricks-color-text,#0f172a)]',
+      ]}
+    >{initials}</span>
+  )}
+
+  <div class:list={[horizontal ? 'min-w-0' : 'flex flex-col items-center']}>
+    <h3 class="font-sans font-extrabold tracking-tight text-lg text-[var(--bricks-color-text,#0f172a)]">
+      {name}
+    </h3>
+    {role && (
+      <p class="text-sm font-semibold text-[var(--bricks-color-accent,#2563eb)]">{role}</p>
+    )}
+    {bio && !compact && (
+      <p class:list={[
+        'mt-2 text-sm leading-relaxed text-[var(--bricks-color-text-muted,#475569)]',
+        horizontal ? '' : 'max-w-prose',
+      ]}>{bio}</p>
+    )}
+
+    {(links.length > 0 || email || website) && (
+      <div class:list={[
+        'mt-3 flex flex-wrap gap-3 text-sm',
+        horizontal ? '' : 'justify-center',
+      ]}>
+        {website && (
+          <a
+            href={website}
+            target="_blank"
+            rel="noopener"
+            class="font-semibold text-[var(--bricks-color-accent,#2563eb)] hover:underline"
+          >Site web</a>
+        )}
+        {email && (
+          <a
+            href={`mailto:${email}`}
+            class="font-semibold text-[var(--bricks-color-accent,#2563eb)] hover:underline"
+          >Email</a>
+        )}
+        {links.map((s) => (
+          <a
+            href={s.href}
+            target="_blank"
+            rel="noopener"
+            class="font-semibold text-[var(--bricks-color-accent,#2563eb)] hover:underline"
+          >
+            {s.icon && <span aria-hidden="true">{s.icon} </span>}{s.platform ?? s.label ?? s.href}
+          </a>
+        ))}
+      </div>
+    )}
+  </div>
+</article>

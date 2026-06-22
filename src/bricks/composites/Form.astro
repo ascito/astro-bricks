@@ -1,0 +1,70 @@
+---
+/**
+ * form — Formulaire avec validation.
+ *
+ * Schema catalog : {
+ *   action?, method?, enctype?, novalidate?, autocomplete?, className?, id?, data?
+ * }
+ *
+ * Coquille <form> native : la validation est déléguée au HTML5 (champs `required`,
+ * `pattern`, types). Les champs sont fournis via le slot par défaut (FormField,
+ * inputs natifs, etc.). `data` injecte des attributs data-* personnalisés.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour le focus-ring
+ * hérité par les champs internes) avec fallbacks.
+ */
+interface Props {
+  /** URL de soumission du formulaire. Défaut : "". */
+  action?: string;
+  /** Méthode HTTP. Défaut : "POST". */
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  /** Encodage. Défaut : "application/x-www-form-urlencoded". */
+  enctype?: 'application/x-www-form-urlencoded' | 'multipart/form-data' | 'text/plain';
+  /** Désactive la validation HTML5 native. Défaut : false. */
+  novalidate?: boolean;
+  /** Autocomplétion du formulaire. Défaut : "on". */
+  autocomplete?: 'on' | 'off';
+  /** Classes additionnelles du conteneur racine. Défaut : "". */
+  className?: string;
+  /** ID HTML. */
+  id?: string;
+  /** Attributs data-* personnalisés. Défaut : {}. */
+  data?: Record<string, string>;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  action = '',
+  method = 'POST',
+  enctype = 'application/x-www-form-urlencoded',
+  novalidate = false,
+  autocomplete = 'on',
+  className = '',
+  id,
+  data = {},
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const dataAttrs = Object.fromEntries(
+  Object.entries(data).map(([k, v]) => [`data-${k}`, v])
+);
+
+const containerClass = ['mb-6 space-y-5', className].filter(Boolean).join(' ');
+---
+
+<form
+  id={id}
+  action={action}
+  method={method}
+  enctype={enctype}
+  autocomplete={autocomplete}
+  novalidate={novalidate || undefined}
+  class={containerClass}
+  {...dataAttrs}
+  {...rest}
+>
+  <slot />
+</form>

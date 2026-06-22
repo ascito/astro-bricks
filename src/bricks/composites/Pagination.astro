@@ -1,0 +1,208 @@
+---
+/**
+ * pagination — Navigation paginée (liens numérotés, sans JS).
+ *
+ * Schema catalog : {
+ *   currentPage?, totalPages (REQUIS), baseUrl?, showPrevNext?, showFirstLast?,
+ *   maxVisible?, variant?, size?, align?, labels?{prev,next,first,last}, className?
+ * }
+ *
+ * Fonctionnement : rendu 100% serveur. La fenêtre de pages visibles est calculée
+ * en frontmatter à partir de `currentPage`, `totalPages` et `maxVisible`, centrée
+ * sur la page courante et bornée. Des ellipses (…) sont insérées quand la fenêtre
+ * ne touche pas les extrémités. Chaque page est un lien `baseUrl + n`. Aucun script.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour la page active,
+ * surface/border/text) avec fallbacks. Accessibilité : <nav aria-label>,
+ * aria-current="page" sur la page active. Marge racine `mb-12`.
+ */
+interface Labels {
+  prev?: string;
+  next?: string;
+  first?: string;
+  last?: string;
+}
+interface Props {
+  /** Page actuelle (1-indexée). Défaut : 1. */
+  currentPage?: number;
+  /** Nombre total de pages. REQUIS. */
+  totalPages: number;
+  /** URL de base, page concaténée (ex: "/blog?page="). Défaut : "?page=". */
+  baseUrl?: string;
+  /** Afficher Précédent/Suivant. Défaut : true. */
+  showPrevNext?: boolean;
+  /** Afficher Premier/Dernier. Défaut : false. */
+  showFirstLast?: boolean;
+  /** Nombre max de pages visibles. Défaut : 5. */
+  maxVisible?: number;
+  /** Style. Défaut : "default". */
+  variant?: 'default' | 'rounded' | 'minimal' | 'bordered';
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Alignement. Défaut : "center". */
+  align?: 'start' | 'center' | 'end';
+  /** Libellés personnalisés. */
+  labels?: Labels;
+  /** Classe additionnelle (depuis schema). */
+  className?: string;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  currentPage = 1,
+  totalPages,
+  baseUrl = '?page=',
+  showPrevNext = true,
+  showFirstLast = false,
+  maxVisible = 5,
+  variant = 'default',
+  size = 'md',
+  align = 'center',
+  labels = {},
+  className = '',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const total = Math.max(1, Math.floor(totalPages));
+const current = Math.min(Math.max(1, Math.floor(currentPage)), total);
+const href = (page: number) => `${baseUrl}${page}`;
+
+// Fenêtre de pages visibles centrée sur la page courante, bornée à [1, total].
+const visible = Math.max(1, Math.floor(maxVisible));
+let start = Math.max(1, current - Math.floor(visible / 2));
+let end = Math.min(total, start + visible - 1);
+start = Math.max(1, end - visible + 1);
+
+const pages: number[] = [];
+for (let p = start; p <= end; p++) pages.push(p);
+
+const showLeftEllipsis = start > 2;
+const showRightEllipsis = end < total - 1;
+const showFirstPage = start > 1;
+const showLastPage = end < total;
+
+const lab = {
+  prev: labels.prev ?? 'Précédent',
+  next: labels.next ?? 'Suivant',
+  first: labels.first ?? 'Premier',
+  last: labels.last ?? 'Dernier',
+};
+
+const sizeClass: Record<string, string> = {
+  sm: 'h-8 min-w-8 px-2 text-sm',
+  md: 'h-10 min-w-10 px-3 text-base',
+  lg: 'h-12 min-w-12 px-4 text-lg',
+};
+
+const shape =
+  variant === 'rounded' ? 'rounded-full' : variant === 'minimal' ? 'rounded' : 'rounded-lg';
+
+const itemBase = [
+  'inline-flex items-center justify-center font-medium transition select-none',
+  sizeClass[size],
+  shape,
+].join(' ');
+
+const inactiveItem =
+  variant === 'minimal'
+    ? 'text-[var(--bricks-color-text-muted,#475569)] hover:text-[var(--bricks-color-accent,#f97316)]'
+    : 'border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text-muted,#475569)] hover:border-[var(--bricks-color-accent,#f97316)] hover:text-[var(--bricks-color-accent,#f97316)]';
+
+const activeItem =
+  'bg-[var(--bricks-color-accent,#f97316)] text-white border border-[var(--bricks-color-accent,#f97316)] font-semibold';
+
+const disabledItem = 'pointer-events-none opacity-40';
+
+const alignClass: Record<string, string> = {
+  start: 'justify-start',
+  center: 'justify-center',
+  end: 'justify-end',
+};
+
+const ellipsisClass = 'inline-flex items-center justify-center text-[var(--bricks-color-text-faint,#94a3b8)] ' + sizeClass[size];
+
+const containerClass =
+  customClass ?? ['mb-12', className].filter(Boolean).join(' ');
+---
+
+<nav
+  id={`pagination-${_brickId ?? ''}`}
+  class:list={[containerClass]}
+  aria-label="Pagination"
+  {...rest}
+>
+  <ul class:list={['flex flex-wrap items-center gap-1.5', alignClass[align]]}>
+    {showFirstLast && (
+      <li>
+        <a href={href(1)} class:list={[itemBase, inactiveItem, current === 1 ? disabledItem : '']} aria-disabled={current === 1 ? 'true' : undefined}>
+          {lab.first}
+        </a>
+      </li>
+    )}
+    {showPrevNext && (
+      <li>
+        <a
+          href={href(Math.max(1, current - 1))}
+          class:list={[itemBase, inactiveItem, current === 1 ? disabledItem : '']}
+          aria-label={lab.prev}
+          aria-disabled={current === 1 ? 'true' : undefined}
+        >
+          {lab.prev}
+        </a>
+      </li>
+    )}
+
+    {showFirstPage && (
+      <li>
+        <a href={href(1)} class:list={[itemBase, inactiveItem]} aria-label="Page 1">1</a>
+      </li>
+    )}
+    {showLeftEllipsis && <li><span class:list={[ellipsisClass]} aria-hidden="true">…</span></li>}
+
+    {pages.map((p) => (
+      <li>
+        <a
+          href={href(p)}
+          class:list={[itemBase, p === current ? activeItem : inactiveItem]}
+          aria-label={`Page ${p}`}
+          aria-current={p === current ? 'page' : undefined}
+        >
+          {p}
+        </a>
+      </li>
+    ))}
+
+    {showRightEllipsis && <li><span class:list={[ellipsisClass]} aria-hidden="true">…</span></li>}
+    {showLastPage && (
+      <li>
+        <a href={href(total)} class:list={[itemBase, inactiveItem]} aria-label={`Page ${total}`}>{total}</a>
+      </li>
+    )}
+
+    {showPrevNext && (
+      <li>
+        <a
+          href={href(Math.min(total, current + 1))}
+          class:list={[itemBase, inactiveItem, current === total ? disabledItem : '']}
+          aria-label={lab.next}
+          aria-disabled={current === total ? 'true' : undefined}
+        >
+          {lab.next}
+        </a>
+      </li>
+    )}
+    {showFirstLast && (
+      <li>
+        <a href={href(total)} class:list={[itemBase, inactiveItem, current === total ? disabledItem : '']} aria-disabled={current === total ? 'true' : undefined}>
+          {lab.last}
+        </a>
+      </li>
+    )}
+  </ul>
+</nav>

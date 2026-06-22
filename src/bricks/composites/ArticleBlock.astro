@@ -1,0 +1,142 @@
+---
+/**
+ * article — Article de blog complet (wrapper <article> prose).
+ *
+ * Schema catalog : {
+ *   title (REQUIS), subtitle?, content (REQUIS, HTML), image?, date?,
+ *   author?{name,avatar?,role?}, category?, tags?[], readingTime?,
+ *   showToc?, showShareButtons?, variant?
+ * }
+ *
+ * Fonctionnement : rendu 100% serveur. En-tête (catégorie, titre, sous-titre,
+ * méta auteur/date/temps de lecture), image à la une optionnelle, contenu HTML
+ * en prose, puis tags. Les drapeaux `showToc`/`showShareButtons` sont exposés
+ * via data-attributes pour qu'une brique sœur (TableOfContents, share) puisse
+ * s'y rattacher ; cette brique ne rend pas elle-même la TOC ni le partage.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour catégorie,
+ * text/text-muted, border) avec fallbacks. Marge racine `mb-12`.
+ */
+interface Author {
+  name: string;
+  avatar?: string;
+  role?: string;
+}
+interface Props {
+  /** Titre de l'article. REQUIS. */
+  title: string;
+  /** Sous-titre / chapô. */
+  subtitle?: string;
+  /** Contenu HTML de l'article. REQUIS. */
+  content: string;
+  /** Image à la une. */
+  image?: string;
+  /** Date (texte ou ISO). */
+  date?: string;
+  /** Auteur. */
+  author?: Author;
+  /** Catégorie. */
+  category?: string;
+  /** Tags. */
+  tags?: string[];
+  /** Temps de lecture en minutes. */
+  readingTime?: number;
+  /** Exposer un drapeau TOC (data-show-toc). Défaut : false. */
+  showToc?: boolean;
+  /** Exposer un drapeau partage (data-show-share). Défaut : true. */
+  showShareButtons?: boolean;
+  /** Style. Défaut : "default". */
+  variant?: 'default' | 'magazine' | 'blog' | 'documentation';
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title,
+  subtitle,
+  content,
+  image,
+  date,
+  author,
+  category,
+  tags = [],
+  readingTime,
+  showToc = false,
+  showShareButtons = true,
+  variant = 'default',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const maxWidth = variant === 'magazine' ? 'max-w-3xl' : variant === 'documentation' ? 'max-w-none' : 'max-w-2xl';
+
+const containerClass =
+  customClass ?? ['mb-12 mx-auto', maxWidth].filter(Boolean).join(' ');
+---
+
+<article
+  id={`article-${_brickId ?? ''}`}
+  class:list={[containerClass]}
+  data-article
+  data-show-toc={showToc ? 'true' : 'false'}
+  data-show-share={showShareButtons ? 'true' : 'false'}
+  {...rest}
+>
+  <header class="mb-6">
+    {category && (
+      <p class="mb-2 text-xs font-bold uppercase tracking-wider text-[var(--bricks-color-accent,#f97316)]">
+        {category}
+      </p>
+    )}
+    <h1 class="font-display text-3xl font-extrabold tracking-tight text-[var(--bricks-color-text,#0f172a)] sm:text-4xl">
+      {title}
+    </h1>
+    {subtitle && (
+      <p class="mt-3 text-lg text-[var(--bricks-color-text-muted,#475569)] leading-relaxed">
+        {subtitle}
+      </p>
+    )}
+    {(author || date || readingTime) && (
+      <div class="mt-5 flex flex-wrap items-center gap-3 text-sm text-[var(--bricks-color-text-muted,#475569)]">
+        {author && (
+          <span class="flex items-center gap-2">
+            {author.avatar && (
+              <img src={author.avatar} alt="" class="h-8 w-8 rounded-full object-cover" />
+            )}
+            <span class="font-medium text-[var(--bricks-color-text,#0f172a)]">{author.name}</span>
+            {author.role && <span class="text-[var(--bricks-color-text-faint,#94a3b8)]">· {author.role}</span>}
+          </span>
+        )}
+        {date && (
+          <time>{date}</time>
+        )}
+        {readingTime && <span>· {readingTime} min de lecture</span>}
+      </div>
+    )}
+  </header>
+
+  {image && (
+    <img
+      src={image}
+      alt=""
+      class="mb-8 w-full rounded-2xl object-cover"
+      loading="lazy"
+    />
+  )}
+
+  <div class="prose prose-slate max-w-none text-[var(--bricks-color-text,#0f172a)]" set:html={content} />
+
+  {tags.length > 0 && (
+    <footer class="mt-8 flex flex-wrap gap-2 border-t border-[var(--bricks-color-border,#e2e8f0)] pt-6">
+      {tags.map((tag) => (
+        <span class="rounded-full bg-[var(--bricks-color-surface-alt,#f1f5f9)] px-3 py-1 text-xs font-medium text-[var(--bricks-color-text-muted,#475569)]">
+          #{tag}
+        </span>
+      ))}
+    </footer>
+  )}
+</article>

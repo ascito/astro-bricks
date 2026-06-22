@@ -1,0 +1,95 @@
+---
+/**
+ * checkbox — Case à cocher avec label.
+ *
+ * Schema catalog : {
+ *   name (REQUIS), label (REQUIS), checked?, bind?, value?,
+ *   disabled?, required?, error?, size?
+ * }
+ *
+ * Contrôle de formulaire HTML natif (<input type="checkbox">), zéro framework,
+ * zéro JS. Le label enveloppe la case pour une cible de clic accessible.
+ * L'attribut `bind` est exposé via data-checked (binding côté app/runtime).
+ *
+ * Théming : consomme `--bricks-color-accent` (case cochée), `--bricks-color-border`,
+ * `--bricks-color-text` avec fallbacks.
+ */
+interface Props {
+  /** Nom du champ. REQUIS. */
+  name: string;
+  /** Label affiché à côté de la case. REQUIS. */
+  label: string;
+  /** État coché. Défaut : false. */
+  checked?: boolean;
+  /** Chemin binding. Génère data-checked. */
+  bind?: string;
+  /** Valeur envoyée si coché. Défaut : "1". */
+  value?: string;
+  /** Désactiver le champ. Défaut : false. */
+  disabled?: boolean;
+  /** Champ requis. Défaut : false. */
+  required?: boolean;
+  /** Message d'erreur. */
+  error?: string;
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  label,
+  checked = false,
+  bind,
+  value = '1',
+  disabled = false,
+  required = false,
+  error,
+  size = 'md',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const fieldId = `checkbox-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const boxSize = { sm: 'h-3.5 w-3.5', md: 'h-4 w-4', lg: 'h-5 w-5' }[size];
+const textSize = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' }[size];
+---
+<div class="mb-6" {...rest}>
+  <label
+    for={fieldId}
+    class:list={[
+      'inline-flex items-center gap-2',
+      textSize,
+      'text-[var(--bricks-color-text,#0f172a)]',
+      disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+    ]}
+  >
+    <input
+      id={fieldId}
+      type="checkbox"
+      name={name}
+      value={value}
+      checked={checked}
+      disabled={disabled}
+      required={required}
+      data-checked={bind ?? undefined}
+      aria-invalid={error ? 'true' : undefined}
+      aria-describedby={error ? `${fieldId}-error` : undefined}
+      class:list={[
+        boxSize,
+        'shrink-0 rounded border',
+        'border-[var(--bricks-color-border,#e2e8f0)]',
+        'text-[var(--bricks-color-accent,#2563eb)]',
+        'accent-[var(--bricks-color-accent,#2563eb)]',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bricks-color-accent,#2563eb)]',
+      ]}
+    />
+    <span>{label}</span>
+  </label>
+  {error && (
+    <p id={`${fieldId}-error`} class="mt-1 text-xs text-red-600">{error}</p>
+  )}
+</div>

@@ -1,0 +1,160 @@
+---
+/**
+ * select — Liste déroulante.
+ *
+ * Schema catalog : {
+ *   name (REQUIS), options?, groups?, placeholder?, value?, bind?,
+ *   multiple?, searchable?, size?, variant?, disabled?, required?,
+ *   error?, hint?, fullWidth?
+ * }
+ *
+ * Contrôle de formulaire HTML natif (<select>), zéro framework, zéro JS. Les
+ * options acceptent string ou `{ value, label, disabled? }` ; les optgroups via
+ * `groups: [{ label, options }]`. `searchable` est documenté au catalog mais sans
+ * dépendance JS le <select> natif gère déjà la frappe au clavier ; l'attribut est
+ * exposé via data-searchable pour un éventuel runtime. `bind` → data-value.
+ *
+ * Théming : `--bricks-color-border`, `--bricks-color-text`, `--bricks-color-surface`,
+ * `--bricks-color-accent` (focus) avec fallbacks.
+ */
+interface SelectOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+interface SelectGroup {
+  label: string;
+  options: (string | SelectOption)[];
+}
+
+interface Props {
+  /** Nom du champ. REQUIS. */
+  name: string;
+  /** Liste des options (string ou { value, label, disabled? }). Défaut : []. */
+  options?: (string | SelectOption)[];
+  /** Optgroups. */
+  groups?: SelectGroup[];
+  /** Texte affiché quand aucune option sélectionnée. */
+  placeholder?: string;
+  /** Valeur sélectionnée par défaut. */
+  value?: string;
+  /** Chemin binding (ex: user.country). Génère data-value. */
+  bind?: string;
+  /** Autoriser la sélection multiple. Défaut : false. */
+  multiple?: boolean;
+  /** Activer la recherche dans les options. Défaut : false. */
+  searchable?: boolean;
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Style visuel. Défaut : "default". */
+  variant?: 'default' | 'filled' | 'outlined';
+  /** Désactiver le champ. Défaut : false. */
+  disabled?: boolean;
+  /** Champ requis. Défaut : false. */
+  required?: boolean;
+  /** Message d'erreur. */
+  error?: string;
+  /** Texte d'aide. */
+  hint?: string;
+  /** Pleine largeur. Défaut : false. */
+  fullWidth?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  options = [],
+  groups,
+  placeholder,
+  value,
+  bind,
+  multiple = false,
+  searchable = false,
+  size = 'md',
+  variant = 'default',
+  disabled = false,
+  required = false,
+  error,
+  hint,
+  fullWidth = false,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const fieldId = `select-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const norm = (opt: string | SelectOption): SelectOption =>
+  typeof opt === 'string' ? { value: opt, label: opt } : opt;
+
+const sizeClass = {
+  sm: 'text-sm py-1.5 px-2.5',
+  md: 'text-sm py-2 px-3',
+  lg: 'text-base py-2.5 px-3.5',
+}[size];
+
+const variantClass: Record<NonNullable<Props['variant']>, string> = {
+  default: 'border bg-[var(--bricks-color-surface,#ffffff)]',
+  filled: 'border border-transparent bg-[var(--bricks-color-surface-muted,#f1f5f9)]',
+  outlined: 'border-2 bg-transparent',
+};
+
+const borderColor = error
+  ? 'border-red-500'
+  : 'border-[var(--bricks-color-border,#e2e8f0)]';
+---
+<div class:list={['mb-6', fullWidth ? 'w-full' : '']} {...rest}>
+  <select
+    id={fieldId}
+    name={name}
+    multiple={multiple}
+    disabled={disabled}
+    required={required}
+    data-value={bind ?? undefined}
+    data-searchable={searchable ? 'true' : undefined}
+    aria-invalid={error ? 'true' : undefined}
+    aria-describedby={error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined}
+    class:list={[
+      'block rounded-md text-[var(--bricks-color-text,#0f172a)]',
+      'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+      'disabled:cursor-not-allowed disabled:opacity-60',
+      fullWidth ? 'w-full' : '',
+      sizeClass,
+      variantClass[variant],
+      borderColor,
+    ]}
+  >
+    {placeholder && !multiple && (
+      <option value="" disabled selected={value === undefined || value === ''}>
+        {placeholder}
+      </option>
+    )}
+    {options.map((o) => {
+      const opt = norm(o);
+      return (
+        <option value={opt.value} disabled={opt.disabled} selected={value === opt.value}>
+          {opt.label}
+        </option>
+      );
+    })}
+    {groups?.map((group) => (
+      <optgroup label={group.label}>
+        {group.options.map((o) => {
+          const opt = norm(o);
+          return (
+            <option value={opt.value} disabled={opt.disabled} selected={value === opt.value}>
+              {opt.label}
+            </option>
+          );
+        })}
+      </optgroup>
+    ))}
+  </select>
+  {hint && !error && (
+    <p id={`${fieldId}-hint`} class="mt-1 text-xs text-[var(--bricks-color-text-muted,#475569)]">{hint}</p>
+  )}
+  {error && (
+    <p id={`${fieldId}-error`} class="mt-1 text-xs text-red-600">{error}</p>
+  )}
+</div>

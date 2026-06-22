@@ -1,0 +1,82 @@
+---
+/**
+ * fonts — Chargement de polices Google / custom (injecte des <link> dans le <head>).
+ * Schema catalog : { google?, custom?, preconnect? }
+ *
+ * google : liste de familles. Chaque entrée peut être :
+ *   - une string ("Inter", "Inter:wght@400;700")
+ *   - un objet { family, weights?, italic?, display? }
+ * custom : liste de feuilles de style à charger ({ href } ou string URL).
+ * preconnect : ajoute les preconnect Google Fonts (perf). Défaut : true.
+ */
+interface GoogleFont {
+  family: string;
+  weights?: (number | string)[];
+  italic?: boolean;
+  display?: 'auto' | 'block' | 'swap' | 'fallback' | 'optional';
+}
+
+interface CustomFont {
+  href: string;
+}
+
+interface Props {
+  /** Polices Google Fonts. Défaut : []. */
+  google?: (string | GoogleFont)[];
+  /** Feuilles de style de polices custom. Défaut : []. */
+  custom?: (string | CustomFont)[];
+  /** Ajoute les preconnect Google Fonts. Défaut : true. */
+  preconnect?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  google = [],
+  custom = [],
+  preconnect = true,
+  _brickId,
+  _brickType,
+} = Astro.props;
+
+function buildGoogleHref(font: string | GoogleFont): string {
+  // Format string : déjà formaté à la Google ("Inter:wght@400;700") ou simple nom.
+  if (typeof font === 'string') {
+    const family = font.replace(/ /g, '+');
+    return `family=${family}`;
+  }
+  const family = font.family.replace(/ /g, '+');
+  const display = font.display ?? 'swap';
+  if (font.weights && font.weights.length > 0) {
+    if (font.italic) {
+      const tuples = font.weights
+        .map((w) => `0,${w}`)
+        .concat(font.weights.map((w) => `1,${w}`))
+        .join(';');
+      return `family=${family}:ital,wght@${tuples}`;
+    }
+    return `family=${family}:wght@${font.weights.join(';')}`;
+  }
+  return `family=${family}`;
+}
+
+const hasGoogle = google.length > 0;
+const googleHref = hasGoogle
+  ? `https://fonts.googleapis.com/css2?${google
+      .map(buildGoogleHref)
+      .join('&')}&display=swap`
+  : null;
+
+const customHrefs = custom.map((c) => (typeof c === 'string' ? c : c.href));
+---
+
+{preconnect && hasGoogle && (
+  <>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  </>
+)}
+{googleHref && <link rel="stylesheet" href={googleHref} />}
+{customHrefs.map((href) => (
+  <link rel="stylesheet" href={href} />
+))}

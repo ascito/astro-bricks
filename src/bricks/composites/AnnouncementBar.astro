@@ -1,0 +1,176 @@
+---
+/**
+ * announcement-bar — Barre d'annonce en haut (ou bas) de page, dismissible.
+ *
+ * Schema catalog : {
+ *   message (REQUIS), link?{label,href}, icon?, dismissible?, variant?,
+ *   position?, sticky?, animated?, storageKey?
+ * }
+ *
+ * Fonctionnement : le serveur rend la barre. Si `dismissible` + `storageKey`,
+ * un script client masque la barre au chargement si l'utilisateur l'a déjà
+ * fermée (localStorage), et persiste la fermeture au clic sur le bouton. Sans
+ * `storageKey`, la fermeture n'est que pour la session courante (DOM).
+ * Zéro dépendance externe, compatible Astro View Transitions.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour le lien, et
+ * couleurs par variant) avec fallbacks. Pas de marge racine (barre fixed/relative).
+ */
+interface Props {
+  /** Message affiché. REQUIS. */
+  message: string;
+  /** Lien optionnel. */
+  link?: { label: string; href: string };
+  /** Nom d'icône (rendu sous forme de texte/emoji passé tel quel). */
+  icon?: string;
+  /** Barre fermable. Défaut : true. */
+  dismissible?: boolean;
+  /** Style de la barre. Défaut : "info". */
+  variant?: 'info' | 'success' | 'warning' | 'error' | 'promo';
+  /** Position de la barre. Défaut : "top". */
+  position?: 'top' | 'bottom';
+  /** Coller la barre au bord (fixed). Défaut : false. */
+  sticky?: boolean;
+  /** Animation de défilement (marquee). Défaut : false. */
+  animated?: boolean;
+  /** Clé localStorage pour mémoriser l'état fermé. */
+  storageKey?: string;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  message,
+  link,
+  icon,
+  dismissible = true,
+  variant = 'info',
+  position = 'top',
+  sticky = false,
+  animated = false,
+  storageKey,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const barId = `announcement-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const variantClass: Record<string, string> = {
+  info: 'bg-[var(--bricks-color-info,#0ea5e9)] text-white',
+  success: 'bg-[var(--bricks-color-success,#16a34a)] text-white',
+  warning: 'bg-[var(--bricks-color-warning,#f59e0b)] text-slate-900',
+  error: 'bg-[var(--bricks-color-error,#dc2626)] text-white',
+  promo: 'bg-[var(--bricks-color-accent,#f97316)] text-white',
+};
+
+const positionClass = sticky
+  ? position === 'top'
+    ? 'sticky top-0'
+    : 'sticky bottom-0'
+  : 'relative';
+
+const containerClass =
+  customClass ??
+  [
+    'z-30 w-full px-4 py-2.5 text-sm font-medium',
+    variantClass[variant] ?? variantClass.info,
+    positionClass,
+  ]
+    .filter(Boolean)
+    .join(' ');
+---
+
+<aside
+  id={barId}
+  class:list={[containerClass]}
+  data-announcement
+  data-storage-key={storageKey}
+  role="region"
+  aria-label="Annonce"
+  {...rest}
+>
+  <div class="mx-auto flex max-w-5xl items-center justify-center gap-3">
+    <div class:list={['flex items-center gap-2', animated ? 'announcement-marquee overflow-hidden whitespace-nowrap' : 'flex-wrap text-center']}>
+      {icon && <span aria-hidden="true">{icon}</span>}
+      <span>{message}</span>
+      {link && (
+        <a
+          href={link.href}
+          class="font-semibold underline underline-offset-2 hover:opacity-80"
+        >
+          {link.label}
+        </a>
+      )}
+    </div>
+    {dismissible && (
+      <button
+        type="button"
+        data-announcement-dismiss
+        class="ml-auto shrink-0 rounded p-1 leading-none opacity-80 transition hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current"
+        aria-label="Fermer l'annonce"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
+    )}
+  </div>
+</aside>
+
+<style>
+  .announcement-marquee > span {
+    display: inline-block;
+    animation: announcement-scroll 18s linear infinite;
+  }
+  @keyframes announcement-scroll {
+    from { transform: translateX(100%); }
+    to { transform: translateX(-100%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .announcement-marquee > span { animation: none; }
+  }
+</style>
+
+<script>
+  function setupAnnouncement(bar: HTMLElement) {
+    if (bar.dataset.initialized === 'true') return;
+    bar.dataset.initialized = 'true';
+
+    const key = bar.dataset.storageKey;
+
+    if (key) {
+      try {
+        if (localStorage.getItem(key) === 'dismissed') {
+          bar.hidden = true;
+          return;
+        }
+      } catch {}
+    }
+
+    const dismiss = bar.querySelector<HTMLButtonElement>('[data-announcement-dismiss]');
+    if (dismiss) {
+      dismiss.addEventListener('click', () => {
+        bar.hidden = true;
+        if (key) {
+          try {
+            localStorage.setItem(key, 'dismissed');
+          } catch {}
+        }
+      });
+    }
+  }
+
+  function initAllAnnouncements() {
+    document
+      .querySelectorAll<HTMLElement>('[data-announcement]')
+      .forEach((el) => setupAnnouncement(el));
+  }
+
+  initAllAnnouncements();
+  document.addEventListener('astro:page-load', initAllAnnouncements);
+</script>

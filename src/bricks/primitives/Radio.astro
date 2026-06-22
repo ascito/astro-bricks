@@ -1,0 +1,129 @@
+---
+/**
+ * radio — Bouton radio avec groupe.
+ *
+ * Schema catalog : {
+ *   name (REQUIS), options (REQUIS), value?, bind?, direction?,
+ *   size?, variant?, required?, disabled?, error?
+ * }
+ *
+ * Contrôle de formulaire HTML natif (<input type="radio">) en groupe partageant
+ * le même `name`, zéro framework, zéro JS. Les options acceptent soit une chaîne,
+ * soit `{ value, label, disabled? }`. L'attribut `bind` est exposé via data-value
+ * sur le groupe (binding côté app/runtime).
+ *
+ * Théming : consomme `--bricks-color-accent`, `--bricks-color-border`,
+ * `--bricks-color-text`, `--bricks-color-surface` avec fallbacks.
+ */
+interface RadioOption {
+  value: string;
+  label: string;
+  disabled?: boolean;
+}
+
+interface Props {
+  /** Nom du groupe radio. REQUIS. */
+  name: string;
+  /** Options radio (string ou { value, label, disabled? }). REQUIS. */
+  options: (string | RadioOption)[];
+  /** Valeur sélectionnée par défaut. */
+  value?: string;
+  /** Chemin binding. Génère data-value. */
+  bind?: string;
+  /** Disposition des options. Défaut : "vertical". */
+  direction?: 'vertical' | 'horizontal';
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Style : default (classique), card (encadré), button (boutons). Défaut : "default". */
+  variant?: 'default' | 'card' | 'button';
+  /** Champ requis. Défaut : false. */
+  required?: boolean;
+  /** Désactiver tout le groupe. Défaut : false. */
+  disabled?: boolean;
+  /** Message d'erreur. */
+  error?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  options = [],
+  value,
+  bind,
+  direction = 'vertical',
+  size = 'md',
+  variant = 'default',
+  required = false,
+  disabled = false,
+  error,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const groupId = `radio-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const normalized: RadioOption[] = options.map((opt) =>
+  typeof opt === 'string' ? { value: opt, label: opt } : opt
+);
+
+const boxSize = { sm: 'h-3.5 w-3.5', md: 'h-4 w-4', lg: 'h-5 w-5' }[size];
+const textSize = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' }[size];
+
+const groupClass =
+  direction === 'horizontal' ? 'flex flex-wrap gap-x-5 gap-y-2' : 'flex flex-col gap-2';
+
+const itemBaseClass: Record<NonNullable<Props['variant']>, string> = {
+  default: 'inline-flex items-center gap-2',
+  card: 'inline-flex items-center gap-2 rounded-lg border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] px-3 py-2',
+  button:
+    'inline-flex items-center gap-2 rounded-md border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] px-3 py-1.5 has-[:checked]:border-[var(--bricks-color-accent,#2563eb)] has-[:checked]:text-[var(--bricks-color-accent,#2563eb)]',
+};
+---
+<fieldset
+  class="mb-6 border-0 p-0"
+  role="radiogroup"
+  aria-invalid={error ? 'true' : undefined}
+  aria-describedby={error ? `${groupId}-error` : undefined}
+  data-value={bind ?? undefined}
+  {...rest}
+>
+  <div class={groupClass}>
+    {normalized.map((opt, i) => {
+      const optId = `${groupId}-${i}`;
+      const optDisabled = disabled || opt.disabled;
+      return (
+        <label
+          for={optId}
+          class:list={[
+            itemBaseClass[variant],
+            textSize,
+            'text-[var(--bricks-color-text,#0f172a)]',
+            optDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+          ]}
+        >
+          <input
+            id={optId}
+            type="radio"
+            name={name}
+            value={opt.value}
+            checked={value === opt.value}
+            disabled={optDisabled}
+            required={required}
+            class:list={[
+              boxSize,
+              'shrink-0',
+              'accent-[var(--bricks-color-accent,#2563eb)]',
+              'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--bricks-color-accent,#2563eb)]',
+            ]}
+          />
+          <span>{opt.label}</span>
+        </label>
+      );
+    })}
+  </div>
+  {error && (
+    <p id={`${groupId}-error`} class="mt-1 text-xs text-red-600">{error}</p>
+  )}
+</fieldset>

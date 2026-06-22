@@ -1,0 +1,194 @@
+---
+/**
+ * range — Slider de valeur numérique.
+ *
+ * Schema catalog : {
+ *   name?, label?, min?, max?, step?, value?, bind?, showValue?,
+ *   showMinMax?, showTicks?, tickCount?, unit?, disabled?, size?, variant?
+ * }
+ *
+ * Contrôle de formulaire HTML natif (<input type="range">). Un <script> client
+ * (rendu uniquement si showValue) met à jour l'affichage de la valeur courante en
+ * temps réel, avec ré-init sur astro:page-load + guard dataset.initialized.
+ * `bind` est exposé via data-value.
+ *
+ * Théming : la couleur active du slider consomme `--bricks-color-accent` (variant
+ * primary) ou une couleur sémantique ; texte via `--bricks-color-text`.
+ */
+interface Props {
+  /** Nom du champ. */
+  name?: string;
+  /** Label du slider. */
+  label?: string;
+  /** Valeur min. Défaut : 0. */
+  min?: number;
+  /** Valeur max. Défaut : 100. */
+  max?: number;
+  /** Pas. Défaut : 1. */
+  step?: number;
+  /** Valeur initiale. */
+  value?: number;
+  /** Chemin binding. Génère data-value. */
+  bind?: string;
+  /** Afficher la valeur actuelle. Défaut : true. */
+  showValue?: boolean;
+  /** Afficher min/max aux extrémités. Défaut : false. */
+  showMinMax?: boolean;
+  /** Afficher les graduations. Défaut : false. */
+  showTicks?: boolean;
+  /** Nombre de graduations. Défaut : 5. */
+  tickCount?: number;
+  /** Unité à afficher (ex: €, %, km). */
+  unit?: string;
+  /** Désactiver le champ. Défaut : false. */
+  disabled?: boolean;
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Couleur active. Défaut : "primary". */
+  variant?: 'primary' | 'success' | 'warning' | 'danger';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  label,
+  min = 0,
+  max = 100,
+  step = 1,
+  value,
+  bind,
+  showValue = true,
+  showMinMax = false,
+  showTicks = false,
+  tickCount = 5,
+  unit,
+  disabled = false,
+  size = 'md',
+  variant = 'primary',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const fieldId = `range-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+const initialValue = value ?? min;
+
+const accentColor: string = {
+  primary: 'var(--bricks-color-accent,#2563eb)',
+  success: '#16a34a',
+  warning: '#d97706',
+  danger: '#dc2626',
+}[variant];
+
+const trackHeight = { sm: '4px', md: '6px', lg: '8px' }[size];
+const textSize = { sm: 'text-xs', md: 'text-sm', lg: 'text-base' }[size];
+
+const ticks = showTicks
+  ? Array.from({ length: Math.max(2, tickCount) }, (_, i) => {
+      const t = i / (Math.max(2, tickCount) - 1);
+      return Math.round((min + t * (max - min)) * 100) / 100;
+    })
+  : [];
+---
+<div class="mb-6" data-range data-unit={unit ?? ''} {...rest}>
+  {(label || showValue) && (
+    <div class:list={['mb-1.5 flex items-center justify-between gap-2', textSize]}>
+      {label && (
+        <label for={fieldId} class="text-[var(--bricks-color-text,#0f172a)]">{label}</label>
+      )}
+      {showValue && (
+        <span class="font-semibold tabular-nums text-[var(--bricks-color-text,#0f172a)]" data-range-value>
+          {initialValue}{unit ? ` ${unit}` : ''}
+        </span>
+      )}
+    </div>
+  )}
+  <input
+    id={fieldId}
+    type="range"
+    name={name}
+    min={min}
+    max={max}
+    step={step}
+    value={initialValue}
+    disabled={disabled}
+    data-value={bind ?? undefined}
+    class="range-slider w-full disabled:cursor-not-allowed disabled:opacity-60"
+  />
+  {showMinMax && (
+    <div class:list={['mt-1 flex justify-between text-[var(--bricks-color-text-muted,#475569)]', textSize]}>
+      <span>{min}{unit ? ` ${unit}` : ''}</span>
+      <span>{max}{unit ? ` ${unit}` : ''}</span>
+    </div>
+  )}
+  {ticks.length > 0 && (
+    <div class:list={['mt-1 flex justify-between text-[var(--bricks-color-text-faint,#94a3b8)]', 'text-[10px]']}>
+      {ticks.map((t) => <span>{t}</span>)}
+    </div>
+  )}
+</div>
+
+<style define:vars={{ rangeAccent: accentColor, rangeTrackH: trackHeight }}>
+  [data-range] .range-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    height: var(--rangeTrackH);
+    border-radius: 9999px;
+    background: var(--bricks-color-border, #e2e8f0);
+    outline: none;
+  }
+  [data-range] .range-slider:focus-visible {
+    outline: 2px solid var(--rangeAccent);
+    outline-offset: 4px;
+  }
+  [data-range] .range-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: var(--rangeAccent);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+  }
+  [data-range] .range-slider::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 9999px;
+    background: var(--rangeAccent);
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+  }
+</style>
+
+{showValue && (
+  <script>
+    function setupRange(root: HTMLElement) {
+      if (root.dataset.initialized === 'true') return;
+      root.dataset.initialized = 'true';
+
+      const slider = root.querySelector<HTMLInputElement>('.range-slider');
+      const output = root.querySelector<HTMLElement>('[data-range-value]');
+      if (!slider || !output) return;
+
+      const unit = root.dataset.unit || '';
+      const render = () => {
+        output.textContent = unit ? `${slider.value} ${unit}` : slider.value;
+      };
+      slider.addEventListener('input', render);
+      render();
+    }
+
+    function initAllRange() {
+      document
+        .querySelectorAll<HTMLElement>('[data-range]')
+        .forEach((el) => setupRange(el));
+    }
+
+    initAllRange();
+    document.addEventListener('astro:page-load', initAllRange);
+  </script>
+)}

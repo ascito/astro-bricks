@@ -1,0 +1,166 @@
+---
+/**
+ * skeleton — Placeholder de chargement animé.
+ *
+ * Schema catalog : {
+ *   variant?, width?, height?, lines?, animation?, rounded?, className?, id?
+ * }
+ *
+ * Fonctionnement : pur CSS, zéro JS. `variant` choisit la forme (text = barres de
+ * lignes, la dernière à 70 % de largeur ; circular/avatar = disque ; rectangular =
+ * bloc ; card = image + 3 lignes ; button = pastille). `animation` = pulse
+ * (`animate-pulse`), wave (dégradé balayé) ou none. `lines` ne s'applique qu'au
+ * variant text.
+ *
+ * Théming : consomme `--bricks-color-border` (base du placeholder) et
+ * `--bricks-color-surface` (reflet de la vague) avec fallbacks.
+ */
+interface Props {
+  /** Forme du placeholder. Défaut : "text". */
+  variant?: 'text' | 'circular' | 'rectangular' | 'card' | 'avatar' | 'button';
+  /** Largeur CSS (100%, 200px, etc.). Défaut : "100%". */
+  width?: string;
+  /** Hauteur CSS (auto par défaut selon variant). */
+  height?: string;
+  /** Nombre de lignes (variant=text). Défaut : 1. */
+  lines?: number;
+  /** Animation. Défaut : "pulse". */
+  animation?: 'pulse' | 'wave' | 'none';
+  /** Arrondi. Défaut : "md". */
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'full';
+  /** Override des classes du conteneur racine. */
+  className?: string;
+  /** ID HTML. */
+  id?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  variant = 'text',
+  width = '100%',
+  height,
+  lines = 1,
+  animation = 'pulse',
+  rounded = 'md',
+  className = '',
+  id,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const roundedClass = {
+  none: 'rounded-none',
+  sm: 'rounded-sm',
+  md: 'rounded-md',
+  lg: 'rounded-lg',
+  full: 'rounded-full',
+}[rounded];
+
+const animClass = {
+  pulse: 'skeleton-pulse',
+  wave: 'skeleton-wave',
+  none: '',
+}[animation];
+
+const base = 'skeleton-block bg-[var(--bricks-color-border,#e2e8f0)]';
+
+// Hauteurs par défaut selon variant
+const defaultHeight = {
+  text: '0.85em',
+  circular: width,
+  avatar: width,
+  rectangular: height ?? '8rem',
+  card: undefined,
+  button: '2.5rem',
+}[variant];
+
+const isCircle = variant === 'circular' || variant === 'avatar';
+---
+
+<div
+  id={id}
+  role="status"
+  aria-busy="true"
+  aria-label="Chargement du contenu"
+  class:list={['block mb-6', className]}
+  {...rest}
+>
+  {variant === 'text' && (
+    <div class="space-y-2">
+      {Array.from({ length: Math.max(1, lines) }).map((_, i) => (
+        <span
+          class:list={[base, animClass, roundedClass, 'block']}
+          style={`width:${i === lines - 1 && lines > 1 ? '70%' : width};height:${height ?? defaultHeight}`}
+        ></span>
+      ))}
+    </div>
+  )}
+
+  {(variant === 'circular' || variant === 'avatar') && (
+    <span
+      class:list={[base, animClass, 'rounded-full block']}
+      style={`width:${width};height:${height ?? defaultHeight};aspect-ratio:1/1`}
+    ></span>
+  )}
+
+  {variant === 'rectangular' && (
+    <span
+      class:list={[base, animClass, roundedClass, 'block']}
+      style={`width:${width};height:${defaultHeight}`}
+    ></span>
+  )}
+
+  {variant === 'button' && (
+    <span
+      class:list={[base, animClass, roundedClass, 'block']}
+      style={`width:${width === '100%' ? '8rem' : width};height:${height ?? defaultHeight}`}
+    ></span>
+  )}
+
+  {variant === 'card' && (
+    <div class:list={[roundedClass, 'overflow-hidden']} style={`width:${width}`}>
+      <span class:list={[base, animClass, 'block']} style={`height:${height ?? '10rem'}`}></span>
+      <div class="space-y-2 p-4">
+        <span class:list={[base, animClass, roundedClass, 'block']} style="width:60%;height:1.1em"></span>
+        <span class:list={[base, animClass, roundedClass, 'block']} style="width:100%;height:0.85em"></span>
+        <span class:list={[base, animClass, roundedClass, 'block']} style="width:80%;height:0.85em"></span>
+      </div>
+    </div>
+  )}
+</div>
+
+<style>
+  .skeleton-pulse {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
+  .skeleton-wave {
+    position: relative;
+    overflow: hidden;
+  }
+  .skeleton-wave::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--bricks-color-surface, #ffffff) 65%, transparent),
+      transparent
+    );
+    animation: skeleton-wave 1.6s linear infinite;
+  }
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+  @keyframes skeleton-wave {
+    to { transform: translateX(100%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .skeleton-pulse { animation-duration: 3s; }
+    .skeleton-wave::after { animation: none; }
+  }
+</style>

@@ -1,0 +1,91 @@
+---
+/**
+ * avatar — Avatar utilisateur avec image ou initiales.
+ *
+ * Schema catalog : { src?, alt?, initials?, size?, shape?, color? }
+ *
+ * Fonctionnement : si `src` est fourni, affiche l'image (lazy) ; sinon affiche
+ * les `initials` sur un fond coloré. Élément inline (pas de marge basse —
+ * exception à la règle mb-12 réservée aux blocs médias autonomes).
+ *
+ * Théming : les couleurs de fond des initiales restent des palettes nommées
+ * (primary, secondary, …) ; le cadre/anneau utilise `--bricks-color-border`.
+ */
+interface Props {
+  /** URL de l'image. Si absent, on affiche les initiales. */
+  src?: string;
+  /** Texte alternatif de l'image. Défaut : "". */
+  alt?: string;
+  /** Initiales / lettre affichées si pas d'image. */
+  initials?: string;
+  /** Taille. Défaut : "md". */
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  /** Forme. Défaut : "circle". */
+  shape?: 'circle' | 'rounded' | 'square';
+  /** Couleur de fond des initiales. Défaut : "primary". */
+  color?: 'primary' | 'secondary' | 'success' | 'warning' | 'danger' | 'gray' | 'dark';
+  /** Override des classes de l'élément racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  src,
+  alt = '',
+  initials,
+  size = 'md',
+  shape = 'circle',
+  color = 'primary',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const sizeClass = {
+  xs: 'h-6 w-6 text-[10px]',
+  sm: 'h-8 w-8 text-xs',
+  md: 'h-10 w-10 text-sm',
+  lg: 'h-12 w-12 text-base',
+  xl: 'h-16 w-16 text-lg',
+  '2xl': 'h-20 w-20 text-2xl',
+}[size];
+
+const shapeClass = {
+  circle: 'rounded-full',
+  rounded: 'rounded-lg',
+  square: 'rounded-none',
+}[shape];
+
+const colorClass = {
+  primary: 'bg-blue-500 text-white',
+  secondary: 'bg-purple-500 text-white',
+  success: 'bg-green-500 text-white',
+  warning: 'bg-amber-500 text-white',
+  danger: 'bg-red-500 text-white',
+  gray: 'bg-gray-300 text-gray-800',
+  dark: 'bg-slate-800 text-white',
+}[color];
+
+const baseClass = 'mb-0 inline-flex flex-shrink-0 items-center justify-center overflow-hidden font-sans font-bold align-middle';
+---
+{src ? (
+  <img
+    src={src}
+    alt={alt}
+    loading="lazy"
+    decoding="async"
+    class:list={[baseClass, sizeClass, shapeClass, 'object-cover', customClass]}
+    {...rest}
+  />
+) : (
+  <span
+    class:list={[baseClass, sizeClass, shapeClass, colorClass, customClass]}
+    role="img"
+    aria-label={alt || initials || 'Avatar'}
+    {...rest}
+  >
+    {initials}
+  </span>
+)}

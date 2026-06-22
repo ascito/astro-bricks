@@ -1,0 +1,181 @@
+---
+/**
+ * switch — Interrupteur on/off.
+ *
+ * Schema catalog : {
+ *   name?, label?, description?, checked?, bind?, disabled?,
+ *   size?, variant?, labelPosition?, showLabels?
+ * }
+ *
+ * Contrôle de formulaire HTML natif (<input type="checkbox" role="switch">) stylé
+ * en interrupteur via CSS pur (état piloté par :checked dans un <style> scopé),
+ * zéro framework, zéro JS. L'attribut `bind` est exposé via data-checked.
+ *
+ * Théming : la piste active consomme `--bricks-color-accent` (variants default /
+ * primary) ou vert (success) ; texte via `--bricks-color-text` avec fallbacks.
+ */
+interface Props {
+  /** Nom du champ. */
+  name?: string;
+  /** Label à côté du switch. */
+  label?: string;
+  /** Description sous le label. */
+  description?: string;
+  /** État activé. Défaut : false. */
+  checked?: boolean;
+  /** Chemin binding. Génère data-checked. */
+  bind?: string;
+  /** Désactiver le champ. Défaut : false. */
+  disabled?: boolean;
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Couleur active. Défaut : "primary". */
+  variant?: 'default' | 'success' | 'primary';
+  /** Position du label. Défaut : "right". */
+  labelPosition?: 'left' | 'right';
+  /** Afficher ON/OFF dans le switch. Défaut : false. */
+  showLabels?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  label,
+  description,
+  checked = false,
+  bind,
+  disabled = false,
+  size = 'md',
+  variant = 'primary',
+  labelPosition = 'right',
+  showLabels = false,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const fieldId = `switch-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const dims = {
+  sm: { w: 32, h: 16, knob: 12 },
+  md: { w: 44, h: 24, knob: 20 },
+  lg: { w: 56, h: 28, knob: 24 },
+}[size];
+const pad = (dims.h - dims.knob) / 2;
+const shift = dims.w - dims.knob - pad * 2;
+
+const onColor =
+  variant === 'success'
+    ? '#16a34a'
+    : 'var(--bricks-color-accent,#2563eb)';
+
+const textSize = { sm: 'text-sm', md: 'text-sm', lg: 'text-base' }[size];
+---
+<label
+  for={fieldId}
+  class:list={[
+    'mb-6 inline-flex items-center gap-3',
+    labelPosition === 'left' ? 'flex-row-reverse' : 'flex-row',
+    disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+  ]}
+  data-switch
+  {...rest}
+>
+  <input
+    id={fieldId}
+    type="checkbox"
+    role="switch"
+    name={name}
+    checked={checked}
+    disabled={disabled}
+    data-checked={bind ?? undefined}
+    aria-checked={checked ? 'true' : 'false'}
+    class="switch-input sr-only"
+  />
+  <span class="switch-track" aria-hidden="true">
+    {showLabels && (
+      <>
+        <span class="switch-on">ON</span>
+        <span class="switch-off">OFF</span>
+      </>
+    )}
+    <span class="switch-knob"></span>
+  </span>
+  {(label || description) && (
+    <span class="flex flex-col">
+      {label && (
+        <span class:list={[textSize, 'text-[var(--bricks-color-text,#0f172a)]']}>{label}</span>
+      )}
+      {description && (
+        <span class="text-xs text-[var(--bricks-color-text-muted,#475569)]">{description}</span>
+      )}
+    </span>
+  )}
+</label>
+
+<style
+  define:vars={{
+    switchW: `${dims.w}px`,
+    switchH: `${dims.h}px`,
+    switchKnob: `${dims.knob}px`,
+    switchPad: `${pad}px`,
+    switchShift: `${shift}px`,
+    switchOn: onColor,
+  }}
+>
+  [data-switch] .switch-track {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    width: var(--switchW);
+    height: var(--switchH);
+    border-radius: 9999px;
+    background: var(--bricks-color-border, #e2e8f0);
+    transition: background-color 0.2s;
+  }
+  [data-switch] .switch-knob {
+    position: absolute;
+    left: var(--switchPad);
+    width: var(--switchKnob);
+    height: var(--switchKnob);
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+  }
+  [data-switch] .switch-on,
+  [data-switch] .switch-off {
+    position: absolute;
+    font-size: 8px;
+    font-weight: 700;
+    pointer-events: none;
+  }
+  [data-switch] .switch-on {
+    left: 6px;
+    color: #fff;
+    opacity: 0;
+  }
+  [data-switch] .switch-off {
+    right: 6px;
+    color: #64748b;
+    opacity: 1;
+  }
+  [data-switch] .switch-input:checked + .switch-track {
+    background: var(--switchOn);
+  }
+  [data-switch] .switch-input:checked + .switch-track .switch-knob {
+    transform: translateX(var(--switchShift));
+  }
+  [data-switch] .switch-input:checked + .switch-track .switch-on {
+    opacity: 1;
+  }
+  [data-switch] .switch-input:checked + .switch-track .switch-off {
+    opacity: 0;
+  }
+  [data-switch] .switch-input:focus-visible + .switch-track {
+    outline: 2px solid var(--bricks-color-accent, #2563eb);
+    outline-offset: 2px;
+  }
+</style>

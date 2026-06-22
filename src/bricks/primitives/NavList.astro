@@ -1,0 +1,110 @@
+---
+/**
+ * nav-list — Liste de navigation (<nav><ul> de liens).
+ * Schema catalog : { items?, direction?, variant?, size?, gap? }
+ *
+ * items : [{ label, href, active?, target?, rel?, icon? }]
+ * Marge basse mb-6 (élément inline).
+ * Théming via var(--bricks-color-*).
+ */
+interface NavItem {
+  label: string;
+  href: string;
+  active?: boolean;
+  target?: string;
+  rel?: string;
+}
+
+interface Props {
+  /** Liens de navigation. Défaut : []. */
+  items?: NavItem[];
+  /** Orientation. Défaut : "vertical". */
+  direction?: 'vertical' | 'horizontal';
+  /** Style des items. Défaut : "default". */
+  variant?: 'default' | 'pills' | 'underline';
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Espacement entre items (valeur CSS). Défaut : "0.5rem". */
+  gap?: string;
+  /** Label accessible de la nav. Défaut : "Navigation". */
+  ariaLabel?: string;
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  items = [],
+  direction = 'vertical',
+  variant = 'default',
+  size = 'md',
+  gap = '0.5rem',
+  ariaLabel = 'Navigation',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const sizeClass = {
+  sm: 'text-sm',
+  md: 'text-base',
+  lg: 'text-lg',
+}[size];
+
+const padClass = {
+  sm: 'px-2 py-1',
+  md: 'px-3 py-1.5',
+  lg: 'px-4 py-2',
+}[size];
+
+const baseLink =
+  'block no-underline transition-colors text-[var(--bricks-color-text-muted,#475569)] hover:text-[var(--bricks-color-text,#0f172a)]';
+
+const activeColor = 'text-[var(--bricks-color-accent,#2563eb)]';
+
+const variantLink = {
+  default: 'rounded hover:bg-[var(--bricks-color-surface-alt,#f1f5f9)]',
+  pills: `rounded-full ${padClass}`,
+  underline:
+    'border-b-2 border-transparent rounded-none hover:border-[var(--bricks-color-border,#e2e8f0)]',
+}[variant];
+
+const variantActive = {
+  default: `${activeColor} font-semibold bg-[var(--bricks-color-surface-alt,#f1f5f9)]`,
+  pills: `bg-[var(--bricks-color-accent,#2563eb)] text-white hover:text-white`,
+  underline: `${activeColor} font-semibold !border-[var(--bricks-color-accent,#2563eb)]`,
+}[variant];
+
+const innerPad = variant === 'pills' ? '' : padClass;
+---
+
+<nav
+  aria-label={ariaLabel}
+  class:list={['mb-6', sizeClass, customClass]}
+  {...rest}
+>
+  <ul
+    class:list={['flex list-none m-0 p-0', direction === 'horizontal' ? 'flex-row flex-wrap items-center' : 'flex-col']}
+    style={`gap:${gap}`}
+  >
+    {items.map((item) => (
+      <li>
+        <a
+          href={item.href}
+          target={item.target}
+          rel={item.target === '_blank' && !item.rel ? 'noopener noreferrer' : item.rel}
+          aria-current={item.active ? 'page' : undefined}
+          class:list={[
+            baseLink,
+            innerPad,
+            variantLink,
+            item.active ? variantActive : '',
+          ]}
+        >
+          {item.label}
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>

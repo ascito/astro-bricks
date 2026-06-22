@@ -1,0 +1,244 @@
+---
+/**
+ * header — En-tête de page avec logo et nav, responsive.
+ *
+ * Schema catalog : {
+ *   logo? {text?, src?, href?}, title?, nav? [{label, href, active?}],
+ *   actions? [{label, href, variant?}], sticky?, transparent?, variant?, mobileBreakpoint?
+ * }
+ *
+ * Fonctionnement : <header><nav> rendu côté serveur. Sur mobile, la nav + les actions
+ * sont masquées derrière un bouton burger qui ouvre/ferme un panneau (toggle via petit
+ * script client, ARIA expanded). Zéro dépendance externe, compatible View Transitions.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (surface/border/accent) avec fallbacks.
+ */
+interface LogoInput {
+  text?: string;
+  src?: string;
+  href?: string;
+}
+interface NavItem {
+  label: string;
+  href: string;
+  active?: boolean;
+}
+interface ActionItem {
+  label: string;
+  href: string;
+  variant?: 'primary' | 'secondary' | 'outline';
+}
+
+interface Props {
+  /** Logo (texte et/ou image + lien). */
+  logo?: LogoInput;
+  /** Titre du site (alternative/complément au logo). */
+  title?: string;
+  /** Items de navigation. */
+  nav?: NavItem[];
+  /** Boutons d'action (CTA). */
+  actions?: ActionItem[];
+  /** En-tête collant. Défaut : true. */
+  sticky?: boolean;
+  /** Fond transparent. Défaut : false. */
+  transparent?: boolean;
+  /** Style. Défaut : 'default'. */
+  variant?: 'default' | 'centered' | 'minimal';
+  /** Breakpoint CSS de bascule mobile/desktop. Défaut : '768px'. */
+  mobileBreakpoint?: string;
+  /** Label accessible de la navigation. Défaut : 'Navigation principale'. */
+  ariaLabel?: string;
+  /** Classes additionnelles. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  logo,
+  title,
+  nav = [],
+  actions = [],
+  sticky = true,
+  transparent = false,
+  variant = 'default',
+  mobileBreakpoint = '768px',
+  ariaLabel = 'Navigation principale',
+  class: customClass = '',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const headerId = `header-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+const centered = variant === 'centered';
+
+const linkColor =
+  'text-[var(--bricks-color-text-muted,#475569)] hover:text-[var(--bricks-color-text,#0f172a)]';
+const linkActive = 'text-[var(--bricks-color-accent,#2563eb)] font-semibold';
+
+function actionClass(v?: string) {
+  return {
+    primary: 'bg-[var(--bricks-color-accent,#2563eb)] text-white hover:opacity-90',
+    secondary: 'bg-[var(--bricks-color-muted,#f1f5f9)] text-[var(--bricks-color-text,#0f172a)] hover:opacity-90',
+    outline: 'border border-[var(--bricks-color-accent,#2563eb)] text-[var(--bricks-color-accent,#2563eb)] hover:bg-[var(--bricks-color-muted,#f1f5f9)]',
+  }[v ?? 'primary'];
+}
+
+const hasMenu = nav.length > 0 || actions.length > 0;
+---
+<header
+  data-header
+  data-breakpoint={mobileBreakpoint}
+  class:list={[
+    transparent ? 'bg-transparent' : 'bg-[var(--bricks-color-surface,#ffffff)] border-b border-[var(--bricks-color-border,#e2e8f0)]',
+    sticky ? 'sticky top-0 z-40' : '',
+    customClass,
+  ]}
+>
+  <nav
+    id={headerId}
+    aria-label={ariaLabel}
+    class:list={[
+      'mx-auto flex max-w-7xl items-center gap-4 px-4 py-3',
+      centered ? 'flex-col text-center md:flex-row md:justify-between' : 'justify-between',
+    ]}
+  >
+    <a
+      href={logo?.href ?? '/'}
+      class="flex items-center gap-2 font-sans font-extrabold tracking-tight text-lg text-[var(--bricks-color-text,#0f172a)]"
+    >
+      {logo?.src && <img src={logo.src} alt={logo?.text ?? title ?? 'Logo'} class="h-8 w-auto" height="32" />}
+      {(logo?.text || title) && <span>{logo?.text ?? title}</span>}
+    </a>
+
+    {hasMenu && variant !== 'minimal' && (
+      <div class="hidden items-center gap-6 header-desktop">
+        {nav.length > 0 && (
+          <ul class="flex items-center gap-6 text-sm">
+            {nav.map((item) => (
+              <li>
+                <a
+                  href={item.href}
+                  aria-current={item.active ? 'page' : undefined}
+                  class:list={['transition-colors', item.active ? linkActive : linkColor]}
+                >{item.label}</a>
+              </li>
+            ))}
+          </ul>
+        )}
+        {actions.length > 0 && (
+          <div class="flex items-center gap-2">
+            {actions.map((a) => (
+              <a href={a.href} class:list={['rounded-lg px-4 py-2 text-sm font-semibold transition', actionClass(a.variant)]}>
+                {a.label}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
+
+    {hasMenu && variant !== 'minimal' && (
+      <button
+        type="button"
+        class="header-burger inline-flex items-center justify-center rounded-lg p-2 text-[var(--bricks-color-text,#0f172a)]"
+        data-header-toggle
+        aria-expanded="false"
+        aria-controls={`${headerId}-panel`}
+        aria-label="Ouvrir le menu"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" data-icon-open>
+          <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" data-icon-close hidden>
+          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+        </svg>
+      </button>
+    )}
+  </nav>
+
+  {hasMenu && variant !== 'minimal' && (
+    <div
+      id={`${headerId}-panel`}
+      class="header-panel border-t border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] px-4 py-4"
+      data-header-panel
+      hidden
+    >
+      {nav.length > 0 && (
+        <ul class="flex flex-col gap-1 text-sm">
+          {nav.map((item) => (
+            <li>
+              <a
+                href={item.href}
+                aria-current={item.active ? 'page' : undefined}
+                class:list={['block rounded-lg px-3 py-2 transition-colors', item.active ? linkActive : linkColor]}
+              >{item.label}</a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {actions.length > 0 && (
+        <div class="mt-3 flex flex-col gap-2">
+          {actions.map((a) => (
+            <a href={a.href} class:list={['block rounded-lg px-4 py-2 text-center text-sm font-semibold transition', actionClass(a.variant)]}>
+              {a.label}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+
+  {/* Bascule responsive pilotée par le breakpoint custom (props -> CSS var). */}
+  <style define:vars={{ headerBp: mobileBreakpoint }}>
+    [data-header] .header-desktop { display: none; }
+    [data-header] .header-burger { display: inline-flex; }
+    [data-header] .header-panel { display: block; }
+    @media (min-width: var(--headerBp)) {
+      [data-header] .header-desktop { display: flex; }
+      [data-header] .header-burger { display: none; }
+      [data-header] .header-panel { display: none !important; }
+    }
+  </style>
+</header>
+
+<script>
+  function setupHeader(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const toggle = root.querySelector<HTMLButtonElement>('[data-header-toggle]');
+    const panel = root.querySelector<HTMLElement>('[data-header-panel]');
+    if (!toggle || !panel) return;
+
+    const iconOpen = toggle.querySelector<HTMLElement>('[data-icon-open]');
+    const iconClose = toggle.querySelector<HTMLElement>('[data-icon-close]');
+
+    function setOpen(open: boolean) {
+      panel.hidden = !open;
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'Fermer le menu' : 'Ouvrir le menu');
+      if (iconOpen) iconOpen.hidden = open;
+      if (iconClose) iconClose.hidden = !open;
+    }
+
+    toggle.addEventListener('click', () => setOpen(panel.hidden));
+    panel.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) setOpen(false);
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !panel.hidden) {
+        setOpen(false);
+        toggle.focus();
+      }
+    });
+  }
+
+  function initAllHeaders() {
+    document.querySelectorAll<HTMLElement>('[data-header]').forEach((el) => setupHeader(el));
+  }
+
+  initAllHeaders();
+  document.addEventListener('astro:page-load', initAllHeaders);
+</script>

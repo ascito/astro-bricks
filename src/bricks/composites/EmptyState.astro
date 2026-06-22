@@ -1,0 +1,110 @@
+---
+/**
+ * empty-state — État vide avec icône/image, titre, description et actions.
+ *
+ * Schema catalog : {
+ *   title?, description?, icon?, image?, actions?[]{label,href,variant?}, variant?, align?
+ * }
+ *
+ * Fonctionnement : rendu 100% serveur, aucun script. Affiche un visuel (icône
+ * texte/emoji passée telle quelle, ou image), un titre, une description et une
+ * liste de CTA.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour le CTA
+ * principal, text/text-muted, surface/border) avec fallbacks. Marge racine `mb-12`.
+ */
+interface EmptyAction {
+  label: string;
+  href: string;
+  variant?: 'primary' | 'secondary';
+}
+interface Props {
+  /** Titre. Défaut : "Aucun résultat". */
+  title?: string;
+  /** Texte descriptif. */
+  description?: string;
+  /** Icône (texte/emoji, rendu tel quel). */
+  icon?: string;
+  /** URL d'une image illustrative (prioritaire sur l'icône). */
+  image?: string;
+  /** Boutons d'action. */
+  actions?: EmptyAction[];
+  /** Taille/densité. Défaut : "default". */
+  variant?: 'default' | 'compact' | 'large';
+  /** Alignement. Défaut : "center". */
+  align?: 'left' | 'center' | 'right';
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title = 'Aucun résultat',
+  description,
+  icon,
+  image,
+  actions = [],
+  variant = 'default',
+  align = 'center',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const padding =
+  variant === 'compact' ? 'py-8' : variant === 'large' ? 'py-20' : 'py-14';
+
+const alignClass: Record<string, string> = {
+  left: 'items-start text-left',
+  center: 'items-center text-center',
+  right: 'items-end text-right',
+};
+
+const iconSize =
+  variant === 'compact' ? 'text-4xl' : variant === 'large' ? 'text-7xl' : 'text-5xl';
+
+const titleSize = variant === 'large' ? 'text-2xl' : 'text-xl';
+
+const containerClass =
+  customClass ??
+  ['mb-12 flex flex-col px-4', padding, alignClass[align]].filter(Boolean).join(' ');
+---
+
+<div id={`empty-state-${_brickId ?? ''}`} class:list={[containerClass]} {...rest}>
+  {image ? (
+    <img src={image} alt="" class="mb-5 max-h-40 w-auto object-contain opacity-90" />
+  ) : (
+    icon && (
+      <span class:list={['mb-4 text-[var(--bricks-color-text-faint,#94a3b8)]', iconSize]} aria-hidden="true">
+        {icon}
+      </span>
+    )
+  )}
+  <p class:list={['font-sans font-extrabold tracking-tight text-[var(--bricks-color-text,#0f172a)]', titleSize]}>
+    {title}
+  </p>
+  {description && (
+    <p class="mt-2 max-w-md text-[var(--bricks-color-text-muted,#475569)] leading-relaxed">
+      {description}
+    </p>
+  )}
+  {actions.length > 0 && (
+    <div class="mt-6 flex flex-wrap gap-3">
+      {actions.map((action) => (
+        <a
+          href={action.href}
+          class:list={[
+            'rounded-full px-5 py-2.5 text-sm font-semibold transition',
+            action.variant === 'secondary'
+              ? 'border border-[var(--bricks-color-border,#cbd5e1)] text-[var(--bricks-color-text-muted,#475569)] hover:border-[var(--bricks-color-accent,#f97316)]'
+              : 'bg-[var(--bricks-color-accent,#f97316)] text-white hover:opacity-90',
+          ]}
+        >
+          {action.label}
+        </a>
+      ))}
+    </div>
+  )}
+</div>

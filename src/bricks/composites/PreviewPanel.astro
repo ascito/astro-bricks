@@ -1,0 +1,152 @@
+---
+/**
+ * preview-panel — Panneau de prévisualisation (iframe HTML ou URL).
+ *
+ * Schema catalog : {
+ *   html?, url?, title?, height?, width?, showToolbar?, responsive?, viewports?, sandbox?
+ * }
+ *
+ * Fonctionnement : le serveur rend une barre d'outils optionnelle (titre + boutons
+ * de viewport) et une iframe (via `srcdoc` si `html`, sinon `src` si `url`). Un
+ * petit script client gère le changement de viewport (responsive) en ajustant la
+ * largeur de l'iframe. Zéro dépendance externe, compatible Astro View Transitions.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (surface/border pour le
+ * cadre et la toolbar, accent pour le viewport actif) avec fallbacks. Marge racine `mb-12`.
+ */
+interface Viewport {
+  label: string;
+  width: string;
+}
+interface Props {
+  /** Contenu HTML à prévisualiser (rendu via srcdoc). */
+  html?: string;
+  /** URL à prévisualiser (rendu via src). */
+  url?: string;
+  /** Titre affiché dans la toolbar. */
+  title?: string;
+  /** Hauteur de l'iframe. Défaut : "400px". */
+  height?: string;
+  /** Largeur du panneau. Défaut : "100%". */
+  width?: string;
+  /** Afficher la toolbar. Défaut : true. */
+  showToolbar?: boolean;
+  /** Afficher les contrôles de viewport. Défaut : true. */
+  responsive?: boolean;
+  /** Liste des viewports proposés. */
+  viewports?: Viewport[];
+  /** Attribut sandbox de l'iframe. */
+  sandbox?: string;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  html,
+  url,
+  title,
+  height = '400px',
+  width = '100%',
+  showToolbar = true,
+  responsive = true,
+  viewports = [
+    { label: 'Mobile', width: '375px' },
+    { label: 'Tablette', width: '768px' },
+    { label: 'Bureau', width: '100%' },
+  ],
+  sandbox,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const panelId = `preview-panel-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const containerClass =
+  customClass ??
+  [
+    'mb-12 overflow-hidden rounded-2xl border',
+    'border-[var(--bricks-color-border,#e2e8f0)]',
+    'bg-[var(--bricks-color-surface,#ffffff)]',
+  ]
+    .filter(Boolean)
+    .join(' ');
+---
+
+<div
+  id={panelId}
+  class:list={[containerClass]}
+  style={`width:${width}`}
+  data-preview-panel
+  {...rest}
+>
+  {showToolbar && (
+    <div class="flex items-center justify-between gap-4 border-b border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface-alt,#f8fafc)] px-4 py-2">
+      <div class="flex items-center gap-1.5">
+        <span class="h-2.5 w-2.5 rounded-full bg-rose-400"></span>
+        <span class="h-2.5 w-2.5 rounded-full bg-amber-400"></span>
+        <span class="h-2.5 w-2.5 rounded-full bg-emerald-400"></span>
+        {title && (
+          <span class="ml-3 text-sm font-medium text-[var(--bricks-color-text-muted,#475569)]">{title}</span>
+        )}
+      </div>
+      {responsive && (
+        <div class="flex items-center gap-1" role="group" aria-label="Choix du viewport">
+          {viewports.map((vp, i) => (
+            <button
+              type="button"
+              data-preview-viewport={vp.width}
+              aria-pressed={i === viewports.length - 1 ? 'true' : 'false'}
+              class="rounded px-2.5 py-1 text-xs font-medium text-[var(--bricks-color-text-muted,#475569)] transition hover:bg-[var(--bricks-color-surface,#ffffff)] aria-pressed:bg-[var(--bricks-color-accent,#f97316)] aria-pressed:text-white"
+            >
+              {vp.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )}
+  <div class="flex justify-center bg-[var(--bricks-color-surface-alt,#f8fafc)] p-2">
+    <iframe
+      data-preview-frame
+      title={title ?? 'Prévisualisation'}
+      srcdoc={html}
+      src={!html ? url : undefined}
+      sandbox={sandbox}
+      loading="lazy"
+      class="w-full max-w-full border-0 bg-white transition-[width] duration-300"
+      style={`height:${height}`}
+    ></iframe>
+  </div>
+</div>
+
+<script>
+  function setupPreviewPanel(panel: HTMLElement) {
+    if (panel.dataset.initialized === 'true') return;
+    panel.dataset.initialized = 'true';
+
+    const frame = panel.querySelector<HTMLIFrameElement>('[data-preview-frame]');
+    const buttons = panel.querySelectorAll<HTMLButtonElement>('[data-preview-viewport]');
+    if (!frame || buttons.length === 0) return;
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        buttons.forEach((b) => b.setAttribute('aria-pressed', 'false'));
+        btn.setAttribute('aria-pressed', 'true');
+        frame.style.width = btn.dataset.previewViewport || '100%';
+      });
+    });
+  }
+
+  function initAllPreviewPanels() {
+    document
+      .querySelectorAll<HTMLElement>('[data-preview-panel]')
+      .forEach((el) => setupPreviewPanel(el));
+  }
+
+  initAllPreviewPanels();
+  document.addEventListener('astro:page-load', initAllPreviewPanels);
+</script>

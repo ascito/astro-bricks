@@ -1,0 +1,135 @@
+---
+/**
+ * input — Champ de saisie texte.
+ *
+ * Schema catalog : {
+ *   name (REQUIS), type?, placeholder?, value?, bind?, required?,
+ *   disabled?, readonly?, size?, variant?, error?, min?, max?,
+ *   minLength?, maxLength?, pattern?, autocomplete?
+ * }
+ *
+ * Contrôle de formulaire HTML natif (<input>), zéro framework, zéro JS.
+ * `bind` est exposé via data-value (binding côté app/runtime).
+ *
+ * Théming : `--bricks-color-border`, `--bricks-color-text`, `--bricks-color-surface`,
+ * `--bricks-color-accent` (focus) avec fallbacks.
+ */
+interface Props {
+  /** Nom du champ (attribut name). REQUIS. */
+  name: string;
+  /** Type de champ. Défaut : "text". */
+  type?:
+    | 'text'
+    | 'email'
+    | 'password'
+    | 'number'
+    | 'tel'
+    | 'url'
+    | 'search'
+    | 'date'
+    | 'time'
+    | 'datetime-local';
+  /** Placeholder. Défaut : "". */
+  placeholder?: string;
+  /** Valeur initiale. Défaut : "". */
+  value?: string;
+  /** Chemin binding (ex: user.email). Génère data-value. */
+  bind?: string;
+  /** Champ requis. Défaut : false. */
+  required?: boolean;
+  /** Désactiver le champ. Défaut : false. */
+  disabled?: boolean;
+  /** Lecture seule. Défaut : false. */
+  readonly?: boolean;
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Style visuel. Défaut : "default". */
+  variant?: 'default' | 'filled' | 'outlined';
+  /** Affiche l'état d'erreur. Défaut : false. */
+  error?: boolean;
+  /** Valeur min (number/date). */
+  min?: string;
+  /** Valeur max (number/date). */
+  max?: string;
+  /** Longueur min. */
+  minLength?: number;
+  /** Longueur max. */
+  maxLength?: number;
+  /** Pattern de validation. */
+  pattern?: string;
+  /** Autocomplete. Défaut : "off". */
+  autocomplete?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  type = 'text',
+  placeholder = '',
+  value = '',
+  bind,
+  required = false,
+  disabled = false,
+  readonly = false,
+  size = 'md',
+  variant = 'default',
+  error = false,
+  min,
+  max,
+  minLength,
+  maxLength,
+  pattern,
+  autocomplete = 'off',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const fieldId = `input-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const sizeClass = {
+  sm: 'text-sm py-1.5 px-2.5',
+  md: 'text-sm py-2 px-3',
+  lg: 'text-base py-2.5 px-3.5',
+}[size];
+
+const variantClass: Record<NonNullable<Props['variant']>, string> = {
+  default: 'border bg-[var(--bricks-color-surface,#ffffff)]',
+  filled: 'border border-transparent bg-[var(--bricks-color-surface-muted,#f1f5f9)]',
+  outlined: 'border-2 bg-transparent',
+};
+
+const borderColor = error
+  ? 'border-red-500'
+  : 'border-[var(--bricks-color-border,#e2e8f0)]';
+---
+<input
+  id={fieldId}
+  type={type}
+  name={name}
+  placeholder={placeholder}
+  value={value}
+  required={required}
+  disabled={disabled}
+  readonly={readonly}
+  min={min}
+  max={max}
+  minlength={minLength}
+  maxlength={maxLength}
+  pattern={pattern}
+  autocomplete={autocomplete}
+  data-value={bind ?? undefined}
+  aria-invalid={error ? 'true' : undefined}
+  class:list={[
+    'mb-6 block w-full rounded-md text-[var(--bricks-color-text,#0f172a)]',
+    'placeholder:text-[var(--bricks-color-text-faint,#94a3b8)]',
+    'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+    'disabled:cursor-not-allowed disabled:opacity-60',
+    'read-only:bg-[var(--bricks-color-surface-muted,#f1f5f9)]',
+    sizeClass,
+    variantClass[variant],
+    borderColor,
+  ]}
+  {...rest}
+/>

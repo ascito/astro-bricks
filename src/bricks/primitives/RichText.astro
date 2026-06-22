@@ -1,0 +1,66 @@
+---
+/**
+ * rich-text — Contenu HTML riche avec typographie prose.
+ *
+ * Schema catalog : { content (REQUIS), prose?, size?, maxWidth? }
+ *
+ * Fonctionnement : injecte du HTML via set:html dans un wrapper. Si `prose` est
+ * vrai, applique une typographie de lecture (titres, paragraphes, listes, liens,
+ * citations) via classes utilitaires ciblant les enfants. `size` ajuste la taille
+ * de base du texte. `maxWidth` borne la largeur de la colonne de lecture.
+ *
+ * Théming : consomme `--bricks-color-text` (corps), `--bricks-color-text-muted`
+ * et `--bricks-color-accent` (liens) avec fallbacks.
+ */
+interface Props {
+  /** Contenu HTML à injecter. */
+  content: string;
+  /** Appliquer la typographie prose. Défaut : true. */
+  prose?: boolean;
+  /** Taille de base du texte. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Largeur max de la colonne (ex: "65ch", "720px"). */
+  maxWidth?: string;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  content,
+  prose = true,
+  size = 'md',
+  maxWidth,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const sizeClass = { sm: 'text-sm', md: 'text-base', lg: 'text-lg' }[size];
+
+const proseClass = prose
+  ? [
+      'leading-relaxed text-[var(--bricks-color-text,#334155)]',
+      '[&>*:first-child]:mt-0 [&>*:last-child]:mb-0',
+      '[&_h2]:font-sans [&_h2]:font-extrabold [&_h2]:tracking-tight [&_h2]:text-[var(--bricks-color-text,#0f172a)] [&_h2]:mt-8 [&_h2]:mb-3 [&_h2]:text-2xl',
+      '[&_h3]:font-sans [&_h3]:font-extrabold [&_h3]:tracking-tight [&_h3]:text-[var(--bricks-color-text,#0f172a)] [&_h3]:mt-6 [&_h3]:mb-2 [&_h3]:text-xl',
+      '[&_h4]:font-sans [&_h4]:font-extrabold [&_h4]:tracking-tight [&_h4]:text-[var(--bricks-color-text,#0f172a)] [&_h4]:mt-5 [&_h4]:mb-2 [&_h4]:text-lg',
+      '[&_p]:my-4',
+      '[&_ul]:my-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:my-4 [&_ol]:list-decimal [&_ol]:pl-6 [&_li]:my-1',
+      '[&_a]:text-[var(--bricks-color-accent,#2563eb)] [&_a]:underline [&_a]:underline-offset-2 hover:[&_a]:no-underline',
+      '[&_strong]:font-semibold [&_strong]:text-[var(--bricks-color-text,#0f172a)]',
+      '[&_blockquote]:border-l-4 [&_blockquote]:border-[var(--bricks-color-border,#e2e8f0)] [&_blockquote]:pl-4 [&_blockquote]:italic [&_blockquote]:text-[var(--bricks-color-text-muted,#475569)]',
+      '[&_img]:my-6 [&_img]:rounded-lg',
+      '[&_code]:rounded [&_code]:bg-[var(--bricks-color-surface-alt,#f1f5f9)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[0.9em]',
+      '[&_hr]:my-8 [&_hr]:border-[var(--bricks-color-border,#e2e8f0)]',
+    ].join(' ')
+  : '';
+---
+<div
+  class:list={['mb-12', sizeClass, proseClass, customClass]}
+  style={maxWidth ? `max-width:${maxWidth}` : undefined}
+  set:html={content}
+  {...rest}
+/>

@@ -1,0 +1,179 @@
+---
+/**
+ * menu-card — Carte de menu restaurant avec prix.
+ *
+ * Schema catalog : {
+ *   title?, subtitle?, price?, sections? [{title?, items:[{name, description?, price?, image?, tags?}]}],
+ *   variant?, showImages?, columns?, priceAlignment?, dividerStyle?, background?, border?, className?, id?
+ * }
+ *
+ * Théming : consomme les variables `--bricks-color-*` (surface/border pour le cadre,
+ * text/text-muted pour le corps, accent pour les prix) avec fallbacks.
+ */
+interface MenuItem {
+  name: string;
+  description?: string;
+  price?: string | number;
+  image?: string;
+  tags?: string[];
+}
+interface MenuSection {
+  title?: string;
+  items?: MenuItem[];
+}
+
+interface Props {
+  /** Titre du menu (ex: "Menu du Jour"). */
+  title?: string;
+  /** Sous-titre ou description. */
+  subtitle?: string;
+  /** Prix global du menu. */
+  price?: string;
+  /** Sections du menu. */
+  sections?: MenuSection[];
+  /** Style. Défaut : 'default'. */
+  variant?: 'default' | 'elegant' | 'casual' | 'minimal';
+  /** Afficher les images des plats. Défaut : false. */
+  showImages?: boolean;
+  /** Nombre de colonnes. Défaut : 1. */
+  columns?: number | string;
+  /** Alignement du prix. Défaut : 'right'. */
+  priceAlignment?: 'right' | 'inline';
+  /** Style de ligne entre nom et prix. Défaut : 'dotted'. */
+  dividerStyle?: 'none' | 'dotted' | 'solid' | 'dashed';
+  /** Fond. Défaut : 'none'. */
+  background?: 'none' | 'light' | 'dark' | 'paper';
+  /** Afficher une bordure. Défaut : false. */
+  border?: boolean;
+  /** Classes additionnelles. */
+  className?: string;
+  /** ID HTML. */
+  id?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title,
+  subtitle,
+  price,
+  sections = [],
+  variant = 'default',
+  showImages = false,
+  columns = 1,
+  priceAlignment = 'right',
+  dividerStyle = 'dotted',
+  background = 'none',
+  border = false,
+  className = '',
+  id,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const cols = Number(columns) || 1;
+
+const BG_MAP: Record<string, string> = {
+  none: '',
+  light: 'bg-[var(--bricks-color-muted,#f8fafc)]',
+  dark: 'bg-[var(--bricks-color-text,#0f172a)] text-white',
+  paper: 'bg-[#fdfbf6]',
+};
+const isDark = background === 'dark';
+
+const textMain = isDark ? 'text-white' : 'text-[var(--bricks-color-text,#0f172a)]';
+const textMuted = isDark ? 'text-white/70' : 'text-[var(--bricks-color-text-muted,#475569)]';
+const accent = isDark ? 'text-white' : 'text-[var(--bricks-color-accent,#2563eb)]';
+
+const DIVIDER_BORDER: Record<string, string> = {
+  none: 'border-none',
+  dotted: 'border-dotted',
+  solid: 'border-solid',
+  dashed: 'border-dashed',
+};
+const showDivider = dividerStyle !== 'none' && priceAlignment === 'right';
+---
+<section
+  id={id}
+  data-brick="menu-card"
+  class:list={[
+    'mb-12 rounded-2xl p-6 sm:p-8',
+    BG_MAP[background],
+    border ? 'border border-[var(--bricks-color-border,#e2e8f0)]' : '',
+    className,
+  ]}
+  {...rest}
+>
+  {(title || subtitle || price) && (
+    <header class="mb-6 text-center">
+      {title && (
+        <h3 class:list={['font-sans font-extrabold tracking-tight text-2xl', textMain]}>
+          {title}
+        </h3>
+      )}
+      {subtitle && <p class:list={['mt-1 text-sm', textMuted]}>{subtitle}</p>}
+      {price && <p class:list={['mt-2 font-sans font-extrabold text-xl', accent]}>{price}</p>}
+    </header>
+  )}
+
+  <div
+    class:list={['grid gap-x-10 gap-y-6']}
+    style={cols > 1 ? `grid-template-columns:repeat(${cols},minmax(0,1fr))` : undefined}
+  >
+    {sections.map((section) => (
+      <div>
+        {section.title && (
+          <h4 class:list={['mb-3 font-sans font-extrabold tracking-tight text-sm uppercase', accent]}>
+            {section.title}
+          </h4>
+        )}
+        <ul class="space-y-4">
+          {(section.items ?? []).map((item) => (
+            <li class:list={[showImages && item.image ? 'flex items-start gap-3' : '']}>
+              {showImages && item.image && (
+                <img
+                  src={item.image}
+                  alt={item.name}
+                  loading="lazy"
+                  decoding="async"
+                  width="64"
+                  height="64"
+                  class="h-16 w-16 flex-shrink-0 rounded-lg object-cover"
+                />
+              )}
+              <div class="min-w-0 flex-1">
+                <div class:list={['flex items-baseline gap-2', priceAlignment === 'right' ? 'justify-between' : '']}>
+                  <span class:list={['font-semibold', textMain]}>{item.name}</span>
+                  {showDivider && (
+                    <span
+                      aria-hidden="true"
+                      class:list={['flex-1 border-b', DIVIDER_BORDER[dividerStyle], isDark ? 'border-white/30' : 'border-[var(--bricks-color-border,#cbd5e1)]']}
+                    ></span>
+                  )}
+                  {item.price != null && (
+                    <span class:list={['flex-shrink-0 font-sans font-extrabold', accent]}>
+                      {typeof item.price === 'number' ? `${item.price} €` : item.price}
+                    </span>
+                  )}
+                </div>
+                {item.description && (
+                  <p class:list={['mt-0.5 text-sm leading-relaxed', textMuted]}>{item.description}</p>
+                )}
+                {item.tags && item.tags.length > 0 && (
+                  <div class="mt-1 flex flex-wrap gap-1.5">
+                    {item.tags.map((tag) => (
+                      <span class:list={['rounded-full px-2 py-0.5 text-xs font-semibold', isDark ? 'bg-white/15 text-white/80' : 'bg-[var(--bricks-color-muted,#f1f5f9)] text-[var(--bricks-color-text-muted,#475569)]']}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </div>
+    ))}
+  </div>
+</section>

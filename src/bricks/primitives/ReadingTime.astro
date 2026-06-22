@@ -1,0 +1,72 @@
+---
+/**
+ * reading-time — Temps de lecture estimé.
+ *
+ * Schema catalog : { text?, wordsPerMinute?, format?, icon?, showIcon? }
+ *
+ * Fonctionnement : compte les mots de `text` (split sur les espaces, balises HTML
+ * retirées) et divise par `wordsPerMinute` pour obtenir une durée arrondie au
+ * supérieur (min. 1). La durée est injectée dans `format` via le token `{time}`.
+ * Une icône optionnelle (horloge) précède le texte si `showIcon`.
+ *
+ * Théming : consomme `--bricks-color-text-muted` avec fallback. Marge basse `mb-6`.
+ */
+interface Props {
+  /** Texte source dont on calcule le temps de lecture. */
+  text?: string;
+  /** Mots lus par minute. Défaut : 200. */
+  wordsPerMinute?: number;
+  /** Gabarit d'affichage ; `{time}` est remplacé par la durée. Défaut : "{time} min de lecture". */
+  format?: string;
+  /** Nom de l'icône (informatif ; l'horloge intégrée est utilisée pour le rendu). */
+  icon?: string;
+  /** Afficher l'icône. Défaut : true. */
+  showIcon?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  text = '',
+  wordsPerMinute = 200,
+  format = '{time} min de lecture',
+  icon,
+  showIcon = true,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const plain = String(text)
+  .replace(/<[^>]*>/g, ' ')
+  .trim();
+const wordCount = plain ? plain.split(/\s+/).length : 0;
+const minutes = Math.max(1, Math.ceil(wordCount / (wordsPerMinute || 200)));
+const label = format.replace('{time}', String(minutes));
+---
+
+<span
+  class="mb-6 inline-flex items-center gap-1.5 text-sm text-[var(--bricks-color-text-muted,#475569)]"
+  data-reading-time={minutes}
+  {...rest}
+>
+  {showIcon && (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+      class="inline-block shrink-0"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9"></circle>
+      <polyline points="12 7 12 12 15 14"></polyline>
+    </svg>
+  )}
+  <span>{label}</span>
+</span>

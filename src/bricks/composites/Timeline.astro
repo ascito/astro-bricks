@@ -1,0 +1,156 @@
+---
+/**
+ * timeline — Chronologie verticale d'événements.
+ *
+ * Schema catalog : {
+ *   id?, items (REQUIS)[]{title?,date?,description?,icon?,content?},
+ *   orientation?, variant?, lineStyle?, markerStyle?, color?, animated?
+ * }
+ *
+ * Fonctionnement : rendu 100% serveur. Liste verticale d'items, chacun avec un
+ * marqueur (point/anneau/icône/numéro) relié par une ligne, une date, un titre
+ * et une description. `orientation=horizontal` rend les items en colonnes scroll.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour les marqueurs
+ * et la ligne selon `color`, surface/border/text) avec fallbacks. Marge racine `mb-12`.
+ */
+interface TimelineItem {
+  title?: string;
+  date?: string;
+  description?: string;
+  icon?: string;
+  content?: string;
+}
+interface Props {
+  /** ID HTML. */
+  id?: string;
+  /** Liste des événements. REQUIS. */
+  items: TimelineItem[];
+  /** Orientation. Défaut : "vertical". */
+  orientation?: 'vertical' | 'horizontal';
+  /** Style. Défaut : "default". */
+  variant?: 'default' | 'alternate' | 'compact' | 'card';
+  /** Style de la ligne. Défaut : "solid". */
+  lineStyle?: 'solid' | 'dashed' | 'dotted';
+  /** Style des marqueurs. Défaut : "dot". */
+  markerStyle?: 'dot' | 'ring' | 'icon' | 'number';
+  /** Couleur des marqueurs/ligne. Défaut : "primary". */
+  color?: 'primary' | 'secondary' | 'success' | 'gray';
+  /** Animation au scroll (informatif, non bloquant). Défaut : true. */
+  animated?: boolean;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  id,
+  items,
+  orientation = 'vertical',
+  variant = 'default',
+  lineStyle = 'solid',
+  markerStyle = 'dot',
+  color = 'primary',
+  animated = true,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const accentColor: Record<string, string> = {
+  primary: 'var(--bricks-color-accent,#f97316)',
+  secondary: 'var(--bricks-color-text-muted,#475569)',
+  success: 'var(--bricks-color-success,#16a34a)',
+  gray: '#94a3b8',
+};
+const accent = accentColor[color] ?? accentColor.primary;
+
+const borderStyle =
+  lineStyle === 'dashed' ? 'dashed' : lineStyle === 'dotted' ? 'dotted' : 'solid';
+
+const isHorizontal = orientation === 'horizontal';
+const itemGap = variant === 'compact' ? 'pb-5' : 'pb-8';
+
+const containerClass = customClass ?? 'mb-12';
+---
+
+<div id={id ?? `timeline-${_brickId ?? ''}`} class:list={[containerClass]} {...rest}>
+  <ol
+    class:list={[
+      isHorizontal
+        ? 'flex gap-6 overflow-x-auto pb-2'
+        : 'relative',
+    ]}
+  >
+    {items.map((item, i) => {
+      const isLast = i === items.length - 1;
+      return (
+        <li
+          class:list={[
+            'relative',
+            isHorizontal ? 'min-w-[200px] flex-1 pt-8' : `pl-9 ${isLast ? '' : itemGap}`,
+          ]}
+        >
+          {/* Ligne de connexion */}
+          {!isLast && !isHorizontal && (
+            <span
+              class="absolute left-[10px] top-2 h-full w-px"
+              style={`border-left:2px ${borderStyle} ${accent}33`}
+              aria-hidden="true"
+            ></span>
+          )}
+          {!isLast && isHorizontal && (
+            <span
+              class="absolute left-1/2 top-[10px] h-px w-full"
+              style={`border-top:2px ${borderStyle} ${accent}33`}
+              aria-hidden="true"
+            ></span>
+          )}
+          {/* Marqueur */}
+          <span
+            class:list={[
+              'absolute flex items-center justify-center font-bold text-white',
+              isHorizontal ? 'left-1/2 top-0 -translate-x-1/2' : 'left-0 top-1',
+              markerStyle === 'number' || markerStyle === 'icon'
+                ? 'h-5 w-5 rounded-full text-[10px]'
+                : 'h-5 w-5 rounded-full',
+              markerStyle === 'ring' ? 'bg-transparent' : '',
+            ]}
+            style={
+              markerStyle === 'ring'
+                ? `border:3px solid ${accent}`
+                : `background:${accent}`
+            }
+            aria-hidden="true"
+          >
+            {markerStyle === 'number' && i + 1}
+            {markerStyle === 'icon' && item.icon}
+          </span>
+          {/* Contenu */}
+          <div class:list={[variant === 'card' ? 'rounded-xl border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] p-4 shadow-sm' : '']}>
+            {item.date && (
+              <p class="text-xs font-semibold uppercase tracking-wide" style={`color:${accent}`}>
+                {item.date}
+              </p>
+            )}
+            {item.title && (
+              <p class="mt-0.5 font-sans font-extrabold tracking-tight text-[var(--bricks-color-text,#0f172a)]">
+                {item.title}
+              </p>
+            )}
+            {item.description && (
+              <p class="mt-1 text-sm text-[var(--bricks-color-text-muted,#475569)] leading-relaxed">
+                {item.description}
+              </p>
+            )}
+            {item.content && (
+              <div class="mt-2 text-sm text-[var(--bricks-color-text-muted,#475569)] leading-relaxed" set:html={item.content} />
+            )}
+          </div>
+        </li>
+      );
+    })}
+  </ol>
+</div>

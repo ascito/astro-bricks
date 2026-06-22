@@ -1,0 +1,133 @@
+---
+/**
+ * marquee — Texte / éléments défilants horizontaux.
+ *
+ * Schema catalog : {
+ *   items?, speed?, direction?, pauseOnHover?, gap?, repeat?, variant?
+ * }
+ *
+ * Fonctionnement : animation CSS pure (translateX en boucle), zéro dépendance JS.
+ * Le contenu est dupliqué `repeat` fois pour un défilement sans couture. La durée
+ * est dérivée de `speed` (px/s) appliquée à une animation linéaire infinie.
+ * `pauseOnHover` met l'animation en pause au survol. Le variant `fade-edges`
+ * applique un masque de dégradé sur les bords.
+ *
+ * Items : tableau de chaînes (texte). HTML non interprété (texte brut).
+ *
+ * Théming : couleur de texte via `--bricks-color-text` ; bloc autonome → mb-12.
+ */
+interface Props {
+  /** Éléments à faire défiler (texte). Défaut : []. */
+  items?: string[];
+  /** Vitesse en pixels/seconde. Défaut : 50. */
+  speed?: number;
+  /** Sens du défilement. Défaut : "left". */
+  direction?: 'left' | 'right';
+  /** Mettre en pause au survol. Défaut : true. */
+  pauseOnHover?: boolean;
+  /** Espacement entre éléments. Défaut : "2rem". */
+  gap?: string;
+  /** Nombre de répétitions du groupe. Défaut : 2. */
+  repeat?: number;
+  /** Style. Défaut : "default". */
+  variant?: 'default' | 'fade-edges';
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  items = [],
+  speed = 50,
+  direction = 'left',
+  pauseOnHover = true,
+  gap = '2rem',
+  repeat = 2,
+  variant = 'default',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const marqueeId = `marquee-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+const groups = Math.max(2, repeat); // minimum 2 pour une boucle continue
+
+// Durée = longueur estimée / vitesse. On approxime par le nombre d'items ;
+// la durée réelle se cale via animation linéaire de -50% à 0 sur le contenu dupliqué.
+const baseChars = items.join('').length || 20;
+const durationSec = Math.max(4, (baseChars * 12) / Math.max(1, speed));
+---
+<div
+  id={marqueeId}
+  class:list={['marquee mb-12', variant === 'fade-edges' ? 'marquee--fade' : '', customClass]}
+  data-marquee
+  role="marquee"
+  aria-label="Bandeau défilant"
+  style={`--marquee-gap:${gap};--marquee-duration:${durationSec}s;--marquee-direction:${direction === 'left' ? 'normal' : 'reverse'}`}
+  {...rest}
+>
+  <div class:list={['marquee__track', pauseOnHover ? 'marquee__track--pause' : '']}>
+    {Array.from({ length: groups }).map((_, g) => (
+      <div class="marquee__group" aria-hidden={g > 0 ? 'true' : undefined}>
+        {items.map((item) => (
+          <span class="marquee__item">{item}</span>
+        ))}
+      </div>
+    ))}
+  </div>
+</div>
+
+<style>
+  .marquee {
+    overflow: hidden;
+    width: 100%;
+    color: var(--bricks-color-text, #0f172a);
+  }
+  .marquee__track {
+    display: flex;
+    width: max-content;
+    animation: bricks-marquee var(--marquee-duration, 20s) linear infinite;
+    animation-direction: var(--marquee-direction, normal);
+  }
+  .marquee__track--pause:hover {
+    animation-play-state: paused;
+  }
+  .marquee__group {
+    display: flex;
+    flex-shrink: 0;
+    gap: var(--marquee-gap, 2rem);
+    padding-right: var(--marquee-gap, 2rem);
+  }
+  .marquee__item {
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .marquee--fade {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  @keyframes bricks-marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(calc(-100% / var(--marquee-groups, 2))); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee__track { animation: none; }
+  }
+</style>
+
+<script is:inline>
+  // Pose --marquee-groups sur chaque marquee (nombre de groupes dupliqués) pour
+  // que le keyframe translate exactement d'un groupe. Idempotent.
+  (function () {
+    function init() {
+      document.querySelectorAll('[data-marquee]').forEach(function (el) {
+        var groups = el.querySelectorAll('.marquee__group').length || 2;
+        el.style.setProperty('--marquee-groups', String(groups));
+      });
+    }
+    init();
+    document.addEventListener('astro:page-load', init);
+  })();
+</script>

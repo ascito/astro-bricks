@@ -1,0 +1,236 @@
+---
+/**
+ * textarea — Zone de texte multiligne.
+ *
+ * Schema catalog : {
+ *   name (REQUIS), value?, bind?, placeholder?, rows?, minRows?,
+ *   maxRows?, autoResize?, maxLength?, showCount?, resize?, size?,
+ *   variant?, disabled?, readonly?, required?, error?, hint?, fullWidth?
+ * }
+ *
+ * Contrôle de formulaire HTML natif (<textarea>). Zéro framework. Un <script>
+ * client n'est rendu que si `autoResize` ou `showCount` est actif (sinon zéro-JS) ;
+ * il gère l'auto-redimensionnement (bornes minRows/maxRows) et le compteur de
+ * caractères, avec ré-init sur astro:page-load + guard dataset.initialized.
+ * `bind` est exposé via data-value.
+ *
+ * Théming : `--bricks-color-border`, `--bricks-color-text`, `--bricks-color-surface`,
+ * `--bricks-color-accent` (focus) avec fallbacks.
+ */
+interface Props {
+  /** Nom du champ (attribut name). REQUIS. */
+  name: string;
+  /** Valeur initiale. Défaut : "". */
+  value?: string;
+  /** Chemin binding (ex: user.bio). Génère data-value. */
+  bind?: string;
+  /** Texte indicatif. */
+  placeholder?: string;
+  /** Nombre de lignes visibles. Défaut : 4. */
+  rows?: number;
+  /** Nombre minimum de lignes (auto-resize). */
+  minRows?: number;
+  /** Nombre maximum de lignes (auto-resize). */
+  maxRows?: number;
+  /** Redimensionnement automatique selon le contenu. Défaut : false. */
+  autoResize?: boolean;
+  /** Nombre max de caractères. */
+  maxLength?: number;
+  /** Afficher le compteur de caractères. Défaut : false. */
+  showCount?: boolean;
+  /** Comportement de resize manuel. Défaut : "vertical". */
+  resize?: 'none' | 'vertical' | 'horizontal' | 'both';
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Style visuel. Défaut : "default". */
+  variant?: 'default' | 'filled' | 'outlined';
+  /** Désactiver le champ. Défaut : false. */
+  disabled?: boolean;
+  /** Lecture seule. Défaut : false. */
+  readonly?: boolean;
+  /** Champ requis. Défaut : false. */
+  required?: boolean;
+  /** Message d'erreur. */
+  error?: string;
+  /** Texte d'aide. */
+  hint?: string;
+  /** Pleine largeur. Défaut : false. */
+  fullWidth?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  value = '',
+  bind,
+  placeholder,
+  rows = 4,
+  minRows,
+  maxRows,
+  autoResize = false,
+  maxLength,
+  showCount = false,
+  resize = 'vertical',
+  size = 'md',
+  variant = 'default',
+  disabled = false,
+  readonly = false,
+  required = false,
+  error,
+  hint,
+  fullWidth = false,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const fieldId = `textarea-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+const needsScript = autoResize || showCount;
+
+const sizeClass = {
+  sm: 'text-sm py-1.5 px-2.5',
+  md: 'text-sm py-2 px-3',
+  lg: 'text-base py-2.5 px-3.5',
+}[size];
+
+const variantClass: Record<NonNullable<Props['variant']>, string> = {
+  default: 'border bg-[var(--bricks-color-surface,#ffffff)]',
+  filled: 'border border-transparent bg-[var(--bricks-color-surface-muted,#f1f5f9)]',
+  outlined: 'border-2 bg-transparent',
+};
+
+const resizeClass = {
+  none: 'resize-none',
+  vertical: 'resize-y',
+  horizontal: 'resize-x',
+  both: 'resize',
+}[resize];
+
+const borderColor = error
+  ? 'border-red-500'
+  : 'border-[var(--bricks-color-border,#e2e8f0)]';
+---
+<div
+  class:list={['mb-6', fullWidth ? 'w-full' : '']}
+  data-textarea
+  data-auto-resize={autoResize ? 'true' : 'false'}
+  data-min-rows={minRows ?? ''}
+  data-max-rows={maxRows ?? ''}
+  data-show-count={showCount ? 'true' : 'false'}
+  {...rest}
+>
+  <textarea
+    id={fieldId}
+    name={name}
+    placeholder={placeholder}
+    rows={rows}
+    maxlength={maxLength}
+    disabled={disabled}
+    readonly={readonly}
+    required={required}
+    data-value={bind ?? undefined}
+    aria-invalid={error ? 'true' : undefined}
+    aria-describedby={error ? `${fieldId}-error` : hint ? `${fieldId}-hint` : undefined}
+    class:list={[
+      'block w-full rounded-md text-[var(--bricks-color-text,#0f172a)]',
+      'placeholder:text-[var(--bricks-color-text-faint,#94a3b8)]',
+      'focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+      'disabled:cursor-not-allowed disabled:opacity-60',
+      autoResize ? 'resize-none overflow-hidden' : resizeClass,
+      sizeClass,
+      variantClass[variant],
+      borderColor,
+    ]}
+    set:text={value}
+  ></textarea>
+  <div class="mt-1 flex items-center justify-between gap-2">
+    {hint && !error && (
+      <p id={`${fieldId}-hint`} class="text-xs text-[var(--bricks-color-text-muted,#475569)]">{hint}</p>
+    )}
+    {error && (
+      <p id={`${fieldId}-error`} class="text-xs text-red-600">{error}</p>
+    )}
+    {showCount && (
+      <p class="ml-auto text-xs tabular-nums text-[var(--bricks-color-text-faint,#94a3b8)]" data-textarea-count>
+        {value.length}{maxLength ? `/${maxLength}` : ''}
+      </p>
+    )}
+  </div>
+</div>
+
+{needsScript && (
+  <script>
+    function setupTextarea(root: HTMLElement) {
+      if (root.dataset.initialized === 'true') return;
+      root.dataset.initialized = 'true';
+
+      const ta = root.querySelector<HTMLTextAreaElement>('textarea');
+      if (!ta) return;
+
+      const autoResize = root.dataset.autoResize === 'true';
+      const showCount = root.dataset.showCount === 'true';
+      const minRows = root.dataset.minRows ? Number(root.dataset.minRows) : undefined;
+      const maxRows = root.dataset.maxRows ? Number(root.dataset.maxRows) : undefined;
+      const counter = root.querySelector<HTMLElement>('[data-textarea-count]');
+      const maxLength = ta.maxLength > 0 ? ta.maxLength : undefined;
+
+      const lineHeight = () => {
+        const lh = parseFloat(getComputedStyle(ta).lineHeight);
+        return Number.isFinite(lh) ? lh : 20;
+      };
+      const verticalPad = () => {
+        const cs = getComputedStyle(ta);
+        return (
+          parseFloat(cs.paddingTop) +
+          parseFloat(cs.paddingBottom) +
+          parseFloat(cs.borderTopWidth) +
+          parseFloat(cs.borderBottomWidth)
+        );
+      };
+
+      const resize = () => {
+        ta.style.height = 'auto';
+        const lh = lineHeight();
+        const pad = verticalPad();
+        let next = ta.scrollHeight;
+        if (minRows) next = Math.max(next, minRows * lh + pad);
+        if (maxRows) {
+          const cap = maxRows * lh + pad;
+          if (next > cap) {
+            next = cap;
+            ta.style.overflowY = 'auto';
+          } else {
+            ta.style.overflowY = 'hidden';
+          }
+        }
+        ta.style.height = `${next}px`;
+      };
+
+      const updateCount = () => {
+        if (counter) {
+          counter.textContent = maxLength
+            ? `${ta.value.length}/${maxLength}`
+            : `${ta.value.length}`;
+        }
+      };
+
+      ta.addEventListener('input', () => {
+        if (autoResize) resize();
+        if (showCount) updateCount();
+      });
+
+      if (autoResize) resize();
+      if (showCount) updateCount();
+    }
+
+    function initAllTextarea() {
+      document
+        .querySelectorAll<HTMLElement>('[data-textarea]')
+        .forEach((el) => setupTextarea(el));
+    }
+
+    initAllTextarea();
+    document.addEventListener('astro:page-load', initAllTextarea);
+  </script>
+)}

@@ -1,0 +1,234 @@
+---
+/**
+ * file-upload — Zone de téléchargement de fichiers.
+ *
+ * Schema catalog : {
+ *   name, label?, accept?, multiple?, maxSize?, maxFiles?, dropzone?,
+ *   preview?, dragText?, browseText?, required?, disabled?, error?, variant?
+ * }
+ *
+ * <input type="file"> natif (accept/multiple/required). Le serveur rend la
+ * coquille (dropzone + label + liste). Un script client gère le glisser-déposer,
+ * la validation maxSize/maxFiles, et l'aperçu (preview) ou la liste de fichiers.
+ * Zéro dépendance externe, compatible Astro View Transitions.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour le survol
+ * actif et le focus-ring, border/surface/text, danger pour l'erreur).
+ */
+interface Props {
+  /** Nom du champ. REQUIS. */
+  name: string;
+  /** Label affiché au-dessus de la zone. */
+  label?: string;
+  /** Types acceptés (ex: "image/*,.pdf"). */
+  accept?: string;
+  /** Sélection multiple. Défaut : false. */
+  multiple?: boolean;
+  /** Taille max par fichier (octets). */
+  maxSize?: number;
+  /** Nombre max de fichiers. */
+  maxFiles?: number;
+  /** Activer la zone de glisser-déposer. Défaut : true. */
+  dropzone?: boolean;
+  /** Afficher l'aperçu des fichiers. Défaut : true. */
+  preview?: boolean;
+  /** Texte de la zone de drop. Défaut : "Glissez vos fichiers ici". */
+  dragText?: string;
+  /** Texte du bouton parcourir. Défaut : "ou parcourir". */
+  browseText?: string;
+  /** Champ obligatoire. Défaut : false. */
+  required?: boolean;
+  /** Champ désactivé. Défaut : false. */
+  disabled?: boolean;
+  /** Message d'erreur. */
+  error?: string;
+  /** Variante visuelle. Défaut : "default". */
+  variant?: 'default' | 'compact' | 'avatar';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  name,
+  label,
+  accept,
+  multiple = false,
+  maxSize,
+  maxFiles,
+  dropzone = true,
+  preview = true,
+  dragText = 'Glissez vos fichiers ici',
+  browseText = 'ou parcourir',
+  required = false,
+  disabled = false,
+  error,
+  variant = 'default',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const uid = _brickId ?? Math.random().toString(36).slice(2, 8);
+const inputId = `upload-${name}-${uid}`;
+const errorId = `${inputId}-error`;
+
+const labelClass =
+  'mb-1.5 block font-sans text-sm font-semibold tracking-tight text-[var(--bricks-color-text,#0f172a)]';
+
+const zoneClass = [
+  'group relative flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-center',
+  variant === 'compact' ? 'px-4 py-5' : variant === 'avatar' ? 'aspect-square w-32 p-3' : 'px-6 py-8',
+  'cursor-pointer transition-colors duration-150',
+  'bg-[var(--bricks-color-surface,#ffffff)]',
+  error
+    ? 'border-[var(--bricks-color-danger,#dc2626)]'
+    : 'border-[var(--bricks-color-border,#e2e8f0)] hover:border-[var(--bricks-color-accent,#2563eb)]',
+  'focus-within:ring-2 focus-within:ring-offset-1 focus-within:ring-[var(--bricks-color-accent,#2563eb)]',
+  'data-[dragover=true]:border-[var(--bricks-color-accent,#2563eb)] data-[dragover=true]:bg-[var(--bricks-color-muted,#f1f5f9)]',
+  disabled ? 'pointer-events-none opacity-60' : '',
+].filter(Boolean).join(' ');
+---
+
+<div class="mb-6 w-full" {...rest}>
+  {label && <label for={inputId} class={labelClass}>{label}{required && <span aria-hidden="true" class="text-[var(--bricks-color-danger,#dc2626)]"> *</span>}</label>}
+
+  <label
+    for={inputId}
+    data-upload
+    data-dropzone={dropzone ? 'true' : 'false'}
+    data-preview={preview ? 'true' : 'false'}
+    data-multiple={multiple ? 'true' : 'false'}
+    data-max-size={maxSize ?? ''}
+    data-max-files={maxFiles ?? ''}
+    class={zoneClass}
+  >
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="text-[var(--bricks-color-text-muted,#475569)]">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="M17 8l-5-5-5 5" /><path d="M12 3v12" />
+    </svg>
+    <span class="text-sm font-medium text-[var(--bricks-color-text,#0f172a)]">{dragText}</span>
+    <span class="text-xs text-[var(--bricks-color-accent,#2563eb)] underline">{browseText}</span>
+    <input
+      type="file"
+      id={inputId}
+      name={multiple ? `${name}[]` : name}
+      accept={accept}
+      multiple={multiple || undefined}
+      required={required || undefined}
+      disabled={disabled || undefined}
+      aria-invalid={error ? 'true' : undefined}
+      aria-describedby={error ? errorId : undefined}
+      data-upload-input
+      class="sr-only"
+    />
+  </label>
+
+  <ul data-upload-list class="mt-3 space-y-2 empty:hidden"></ul>
+
+  {error && <p id={errorId} class="mt-1.5 text-xs font-medium text-[var(--bricks-color-danger,#dc2626)]">{error}</p>}
+</div>
+
+<script>
+  function formatSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} o`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
+  }
+
+  function setupUpload(zone: HTMLElement) {
+    if (zone.dataset.initialized === 'true') return;
+    zone.dataset.initialized = 'true';
+
+    const input = zone.querySelector<HTMLInputElement>('[data-upload-input]');
+    const list = zone.parentElement?.querySelector<HTMLElement>('[data-upload-list]');
+    if (!input) return;
+
+    const useDropzone = zone.dataset.dropzone === 'true';
+    const showPreview = zone.dataset.preview === 'true';
+    const maxSize = Number(zone.dataset.maxSize) || 0;
+    const maxFiles = Number(zone.dataset.maxFiles) || 0;
+
+    const render = () => {
+      if (!list) return;
+      list.innerHTML = '';
+      const files = Array.from(input.files ?? []);
+      for (const file of files) {
+        const li = document.createElement('li');
+        li.className =
+          'flex items-center gap-3 rounded-lg border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] px-3 py-2 text-sm';
+
+        const tooBig = maxSize > 0 && file.size > maxSize;
+
+        if (showPreview && file.type.startsWith('image/')) {
+          const img = document.createElement('img');
+          img.className = 'h-10 w-10 flex-shrink-0 rounded object-cover';
+          img.alt = file.name;
+          img.src = URL.createObjectURL(file);
+          img.addEventListener('load', () => URL.revokeObjectURL(img.src), { once: true });
+          li.appendChild(img);
+        }
+
+        const meta = document.createElement('div');
+        meta.className = 'min-w-0 flex-1';
+        const fname = document.createElement('p');
+        fname.className = 'truncate text-[var(--bricks-color-text,#0f172a)]';
+        fname.textContent = file.name;
+        const fsize = document.createElement('p');
+        fsize.className = tooBig
+          ? 'text-xs text-[var(--bricks-color-danger,#dc2626)]'
+          : 'text-xs text-[var(--bricks-color-text-muted,#475569)]';
+        fsize.textContent = tooBig ? `${formatSize(file.size)} — trop volumineux` : formatSize(file.size);
+        meta.appendChild(fname);
+        meta.appendChild(fsize);
+        li.appendChild(meta);
+
+        list.appendChild(li);
+      }
+    };
+
+    const validate = () => {
+      const files = Array.from(input.files ?? []);
+      let message = '';
+      if (maxFiles > 0 && files.length > maxFiles) {
+        message = `Maximum ${maxFiles} fichier(s) autorisé(s).`;
+      } else if (maxSize > 0 && files.some((f) => f.size > maxSize)) {
+        message = `Chaque fichier doit faire au maximum ${formatSize(maxSize)}.`;
+      }
+      input.setCustomValidity(message);
+    };
+
+    input.addEventListener('change', () => {
+      validate();
+      render();
+    });
+
+    if (useDropzone) {
+      const setDrag = (state: boolean) => zone.setAttribute('data-dragover', state ? 'true' : 'false');
+      ['dragenter', 'dragover'].forEach((evt) =>
+        zone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          setDrag(true);
+        })
+      );
+      ['dragleave', 'drop'].forEach((evt) =>
+        zone.addEventListener(evt, (e) => {
+          e.preventDefault();
+          setDrag(false);
+        })
+      );
+      zone.addEventListener('drop', (e) => {
+        const dt = (e as DragEvent).dataTransfer;
+        if (dt && dt.files.length) {
+          input.files = dt.files;
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    }
+  }
+
+  function initAllUpload() {
+    document.querySelectorAll<HTMLElement>('[data-upload]').forEach((el) => setupUpload(el));
+  }
+
+  initAllUpload();
+  document.addEventListener('astro:page-load', initAllUpload);
+</script>

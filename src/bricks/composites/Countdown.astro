@@ -1,0 +1,186 @@
+---
+/**
+ * countdown — Compte à rebours animé vers une date cible.
+ *
+ * Schema catalog : {
+ *   targetDate (REQUIS, ISO), format?, showDays?, showHours?, showMinutes?,
+ *   showSeconds?, labels?, expiredMessage?, variant?, size?, color?
+ * }
+ *
+ * Fonctionnement : le serveur rend les coquilles des unités. Au chargement, un
+ * script client calcule le temps restant jusqu'à `targetDate` et décrémente
+ * chaque seconde (setInterval). À expiration, il affiche `expiredMessage`.
+ * Zéro dépendance externe, compatible Astro View Transitions.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent, surface, text)
+ * avec fallbacks. Marge racine `mb-12`.
+ */
+interface CountdownLabels {
+  days?: string;
+  hours?: string;
+  minutes?: string;
+  seconds?: string;
+}
+interface Props {
+  /** Date cible au format ISO. REQUIS. */
+  targetDate: string;
+  /** Densité d'affichage. Défaut : "full". */
+  format?: 'full' | 'compact' | 'minimal';
+  /** Afficher les jours. Défaut : true. */
+  showDays?: boolean;
+  /** Afficher les heures. Défaut : true. */
+  showHours?: boolean;
+  /** Afficher les minutes. Défaut : true. */
+  showMinutes?: boolean;
+  /** Afficher les secondes. Défaut : true. */
+  showSeconds?: boolean;
+  /** Libellés personnalisés des unités. */
+  labels?: CountdownLabels;
+  /** Message affiché à expiration. Défaut : "Terminé !". */
+  expiredMessage?: string;
+  /** Style des cases. Défaut : "default". */
+  variant?: 'default' | 'card' | 'flip' | 'minimal';
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  /** Schéma de couleur. Défaut : "default". */
+  color?: 'default' | 'primary' | 'secondary';
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  targetDate,
+  format = 'full',
+  showDays = true,
+  showHours = true,
+  showMinutes = true,
+  showSeconds = true,
+  labels = {},
+  expiredMessage = 'Terminé !',
+  variant = 'default',
+  size = 'md',
+  color = 'default',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const countdownId = `countdown-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const units = [
+  { key: 'days', show: showDays, label: labels.days ?? 'Jours' },
+  { key: 'hours', show: showHours, label: labels.hours ?? 'Heures' },
+  { key: 'minutes', show: showMinutes, label: labels.minutes ?? 'Minutes' },
+  { key: 'seconds', show: showSeconds, label: labels.seconds ?? 'Secondes' },
+].filter((u) => u.show);
+
+const numberSize: Record<string, string> = {
+  sm: 'text-2xl',
+  md: 'text-4xl',
+  lg: 'text-5xl',
+  xl: 'text-6xl',
+};
+
+const colorClass: Record<string, string> = {
+  default: 'text-[var(--bricks-color-text,#0f172a)]',
+  primary: 'text-[var(--bricks-color-accent,#f97316)]',
+  secondary: 'text-[var(--bricks-color-text-muted,#475569)]',
+};
+
+const cellClass =
+  variant === 'card' || variant === 'flip'
+    ? 'rounded-xl border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] px-4 py-3 shadow-sm'
+    : '';
+
+const gap = format === 'compact' || format === 'minimal' ? 'gap-3' : 'gap-4 sm:gap-6';
+
+const containerClass = customClass ?? 'mb-12';
+---
+
+<div
+  id={countdownId}
+  class:list={[containerClass]}
+  data-countdown
+  data-target={targetDate}
+  data-expired-message={expiredMessage}
+  {...rest}
+>
+  <div class:list={['flex flex-wrap items-start justify-center', gap]} data-countdown-units>
+    {units.map((u) => (
+      <div class:list={['flex flex-col items-center', cellClass]}>
+        <span
+          class:list={['font-sans font-extrabold tracking-tight tabular-nums', numberSize[size], colorClass[color]]}
+          data-unit={u.key}
+        >
+          --
+        </span>
+        {format !== 'minimal' && (
+          <span class="mt-1 text-xs font-medium uppercase tracking-wide text-[var(--bricks-color-text-muted,#475569)]">
+            {u.label}
+          </span>
+        )}
+      </div>
+    ))}
+  </div>
+  <p
+    class="hidden text-center font-sans text-2xl font-extrabold tracking-tight text-[var(--bricks-color-text,#0f172a)]"
+    data-countdown-expired
+  >
+    {expiredMessage}
+  </p>
+</div>
+
+<script>
+  function setupCountdown(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const target = new Date(root.dataset.target || '').getTime();
+    const unitsBox = root.querySelector<HTMLElement>('[data-countdown-units]');
+    const expiredBox = root.querySelector<HTMLElement>('[data-countdown-expired]');
+    if (isNaN(target) || !unitsBox || !expiredBox) return;
+
+    const cells: Record<string, HTMLElement> = {};
+    root.querySelectorAll<HTMLElement>('[data-unit]').forEach((el) => {
+      cells[el.dataset.unit!] = el;
+    });
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+
+    let timer: number | undefined;
+
+    const tick = () => {
+      const diff = target - Date.now();
+      if (diff <= 0) {
+        unitsBox.hidden = true;
+        expiredBox.classList.remove('hidden');
+        if (timer) window.clearInterval(timer);
+        return;
+      }
+      const totalSeconds = Math.floor(diff / 1000);
+      const days = Math.floor(totalSeconds / 86400);
+      const hours = Math.floor((totalSeconds % 86400) / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      if (cells.days) cells.days.textContent = String(days);
+      if (cells.hours) cells.hours.textContent = pad(hours);
+      if (cells.minutes) cells.minutes.textContent = pad(minutes);
+      if (cells.seconds) cells.seconds.textContent = pad(seconds);
+    };
+
+    tick();
+    timer = window.setInterval(tick, 1000);
+  }
+
+  function initAllCountdowns() {
+    document
+      .querySelectorAll<HTMLElement>('[data-countdown]')
+      .forEach((el) => setupCountdown(el));
+  }
+
+  initAllCountdowns();
+  document.addEventListener('astro:page-load', initAllCountdowns);
+</script>

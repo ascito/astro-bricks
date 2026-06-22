@@ -1,0 +1,167 @@
+---
+/**
+ * code-editor — Afficheur de code stylé (lecture seule).
+ *
+ * Schema catalog : {
+ *   code?, language?, theme?, readOnly?, lineNumbers?, wordWrap?, minimap?,
+ *   height?, fontSize?, tabSize?, highlightActiveLine?, copyButton?
+ * }
+ *
+ * IMPORTANT : ce n'est PAS un vrai éditeur. C'est un bloc <pre><code> en lecture
+ * seule, mis en forme (thème de couleurs, numéros de ligne, bouton copier). Les
+ * props d'éditeur (`readOnly`, `minimap`, `highlightActiveLine`) sont acceptées
+ * pour compat schema mais n'activent aucune édition réelle.
+ *
+ * Fonctionnement : le serveur rend le code échappé. Numéros de ligne via colonne
+ * CSS. `copyButton` ajoute un bouton qui copie le code via navigator.clipboard
+ * (script client, garde dataset.initialized, ré-init astro:page-load).
+ *
+ * Théming : palettes nommées (dark/light/github/monokai/dracula) en couleurs fixes
+ * pour rester fidèles au thème de code ; le cadre suit `--bricks-color-border`.
+ */
+interface Props {
+  /** Code source à afficher. Défaut : "". */
+  code?: string;
+  /** Langage (libellé + classe). Défaut : "javascript". */
+  language?: string;
+  /** Thème de couleurs. Défaut : "dark". */
+  theme?: 'light' | 'dark' | 'github' | 'monokai' | 'dracula';
+  /** Lecture seule (toujours vrai ici — affichage). Défaut : false (ignoré). */
+  readOnly?: boolean;
+  /** Afficher les numéros de ligne. Défaut : true. */
+  lineNumbers?: boolean;
+  /** Retour à la ligne automatique. Défaut : false. */
+  wordWrap?: boolean;
+  /** Minimap (non supportée, ignorée). Défaut : false. */
+  minimap?: boolean;
+  /** Hauteur max (zone scrollable). Défaut : "300px". */
+  height?: string;
+  /** Taille de police en px. Défaut : 14. */
+  fontSize?: number;
+  /** Largeur de tabulation (espaces). Défaut : 2. */
+  tabSize?: number;
+  /** Surligner la ligne active (non supporté, ignoré). Défaut : true. */
+  highlightActiveLine?: boolean;
+  /** Afficher le bouton "Copier". Défaut : true. */
+  copyButton?: boolean;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  code = '',
+  language = 'javascript',
+  theme = 'dark',
+  readOnly = false,
+  lineNumbers = true,
+  wordWrap = false,
+  minimap = false,
+  height = '300px',
+  fontSize = 14,
+  tabSize = 2,
+  highlightActiveLine = true,
+  copyButton = true,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const editorId = `code-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const themeStyle = {
+  dark:    { bg: '#1e1e2e', fg: '#d4d4d4', gutter: '#6b7280', header: '#181825', border: '#313244' },
+  light:   { bg: '#fafafa', fg: '#24292f', gutter: '#9ca3af', header: '#f0f0f0', border: '#e2e8f0' },
+  github:  { bg: '#0d1117', fg: '#c9d1d9', gutter: '#484f58', header: '#161b22', border: '#30363d' },
+  monokai: { bg: '#272822', fg: '#f8f8f2', gutter: '#75715e', header: '#1d1e19', border: '#3e3d32' },
+  dracula: { bg: '#282a36', fg: '#f8f8f2', gutter: '#6272a4', header: '#21222c', border: '#44475a' },
+}[theme];
+
+const lines = code.replace(/\n$/, '').split('\n');
+---
+<div
+  id={editorId}
+  class:list={['mb-12 overflow-hidden rounded-lg border text-sm', customClass]}
+  style={`background:${themeStyle.bg};border-color:${themeStyle.border};color:${themeStyle.fg};font-size:${fontSize}px`}
+  data-code-editor
+  {...rest}
+>
+  <div
+    class="flex items-center justify-between px-4 py-2 text-xs"
+    style={`background:${themeStyle.header};color:${themeStyle.gutter};border-bottom:1px solid ${themeStyle.border}`}
+  >
+    <span class="font-sans font-semibold uppercase tracking-wide">{language}</span>
+    {copyButton && (
+      <button
+        type="button"
+        data-code-copy
+        aria-label="Copier le code"
+        class="inline-flex items-center gap-1.5 rounded px-2 py-1 font-sans transition hover:opacity-80 focus-visible:outline-2 focus-visible:outline-offset-2"
+        style={`color:${themeStyle.fg}`}
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+        </svg>
+        <span data-code-copy-label>Copier</span>
+      </button>
+    )}
+  </div>
+
+  <div class="overflow-auto" style={`max-height:${height}`}>
+    <pre
+      class="m-0 p-0"
+      style={`tab-size:${tabSize};font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace`}
+    ><code
+      data-code-content
+      class={`language-${language}`}
+      style={wordWrap ? 'white-space:pre-wrap;word-break:break-word' : 'white-space:pre'}
+    >{lines.map((line, i) => (
+        <span class="flex">
+          {lineNumbers && (
+            <span
+              aria-hidden="true"
+              class="select-none px-3 text-right tabular-nums"
+              style={`min-width:3rem;color:${themeStyle.gutter}`}
+            >{i + 1}</span>
+          )}
+          <span class={lineNumbers ? 'flex-1 pr-4' : 'flex-1 px-4'}>{line || ' '}</span>
+        </span>
+      ))}</code></pre>
+  </div>
+</div>
+
+<script>
+  function setupCodeEditor(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const copyBtn = root.querySelector<HTMLButtonElement>('[data-code-copy]');
+    const content = root.querySelector<HTMLElement>('[data-code-content]');
+    if (!copyBtn || !content) return;
+
+    const label = copyBtn.querySelector<HTMLElement>('[data-code-copy-label]');
+    copyBtn.addEventListener('click', async () => {
+      const text = content.innerText.replace(/ /g, ' ');
+      try {
+        await navigator.clipboard.writeText(text);
+        if (label) {
+          const prev = label.textContent;
+          label.textContent = 'Copié !';
+          window.setTimeout(() => { label.textContent = prev; }, 1500);
+        }
+      } catch {
+        // Clipboard indisponible (contexte non sécurisé) : on ne fait rien de bruyant.
+      }
+    });
+  }
+
+  function initAllCodeEditors() {
+    document.querySelectorAll<HTMLElement>('[data-code-editor]').forEach((el) => setupCodeEditor(el));
+  }
+
+  initAllCodeEditors();
+  document.addEventListener('astro:page-load', initAllCodeEditors);
+</script>

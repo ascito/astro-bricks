@@ -1,0 +1,43 @@
+---
+/**
+ * variable — Affiche une valeur de donnée interpolée.
+ *
+ * Schema catalog : { name, value, scope? }
+ *
+ * Fonctionnement : rend la `value` reçue. Quand `value` contient un token `{{x.y}}`,
+ * il est déjà résolu en amont par l'engine (cf. engine/tokens.ts) — la brique reçoit
+ * donc la valeur finale, qu'elle soit string, nombre, booléen, ou objet. Les types non
+ * textuels sont sérialisés pour l'affichage. Si la valeur ressemble à du HTML
+ * (commence par "<"), elle est injectée via `set:html`, sinon rendue comme texte.
+ * `scope`/`name` sont conservés en attributs data-* (informatif, sans effet de rendu).
+ *
+ * Théming : hérite de la typo/couleur du contexte parent. Élément inline. Marge basse `mb-6`.
+ */
+interface Props {
+  /** Nom de la variable. */
+  name: string;
+  /** Valeur de la variable (tout type ; tokens résolus en amont). */
+  value: unknown;
+  /** Portée. Défaut : "local". */
+  scope?: 'global' | 'local';
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const { name, value, scope = 'local', _brickId, _brickType, ...rest } = Astro.props;
+
+let rendered: string;
+if (value === null || value === undefined) {
+  rendered = '';
+} else if (typeof value === 'object') {
+  rendered = JSON.stringify(value);
+} else {
+  rendered = String(value);
+}
+
+const isHtml = typeof value === 'string' && rendered.trimStart().startsWith('<');
+---
+
+<span class="mb-6 inline" data-variable={name} data-scope={scope} {...rest}>
+  {isHtml ? <Fragment set:html={rendered} /> : rendered}
+</span>

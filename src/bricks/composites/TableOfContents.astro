@@ -1,0 +1,291 @@
+---
+/**
+ * table-of-contents — Table des matières automatique.
+ *
+ * Schema catalog : {
+ *   selector?, title?, showTitle?, maxDepth?, numbered?,
+ *   sticky?, offset?, smooth?, highlightActive?, collapsible?
+ * }
+ *
+ * Fonctionnement : le serveur rend la coquille (titre + <nav> vide). Au chargement,
+ * un script client scanne `selector` dans la zone de contenu, attribue un id stable
+ * aux titres qui n'en ont pas, construit la liste imbriquée (jusqu'à `maxDepth`
+ * niveaux), gère le scroll fluide et le surlignage de la section active (scroll-spy
+ * via IntersectionObserver). Zéro dépendance externe, compatible Astro View Transitions.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour l'item actif,
+ * text-muted pour les items inactifs, border/surface pour le cadre) avec fallbacks.
+ */
+interface Props {
+  /** Sélecteur CSS des titres à indexer. Défaut : "h2, h3". */
+  selector?: string;
+  /** Titre du bloc. Défaut : "Table des matières". */
+  title?: string;
+  /** Afficher le titre du bloc. Défaut : true. */
+  showTitle?: boolean;
+  /** Profondeur max de la hiérarchie (1 = h2 seul, 2 = +h3, 3 = +h4). Défaut : 3. */
+  maxDepth?: number;
+  /** Numéroter les entrées. Défaut : false. */
+  numbered?: boolean;
+  /** Rendre le bloc collant au scroll. Défaut : false. */
+  sticky?: boolean;
+  /** Décalage haut (px) pour la position collante + le scroll-margin des titres. Défaut : 80. */
+  offset?: number;
+  /** Scroll fluide au clic. Défaut : true. */
+  smooth?: boolean;
+  /** Surligner la section active au scroll. Défaut : true. */
+  highlightActive?: boolean;
+  /** Rendre le bloc repliable (<details>). Défaut : false. */
+  collapsible?: boolean;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  selector = 'h2, h3',
+  title = 'Table des matières',
+  showTitle = true,
+  maxDepth = 3,
+  numbered = false,
+  sticky = false,
+  offset = 80,
+  smooth = true,
+  highlightActive = true,
+  collapsible = false,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const tocId = `toc-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const containerClass =
+  customClass ??
+  [
+    'mb-8 rounded-lg border p-5 text-sm',
+    'border-[var(--bricks-color-border,#e2e8f0)]',
+    'bg-[var(--bricks-color-surface,#ffffff)]',
+    sticky ? 'lg:sticky' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+const titleClass =
+  'mb-3 font-sans font-extrabold tracking-tight text-[var(--bricks-color-text,#0f172a)]';
+---
+
+<aside
+  id={tocId}
+  class:list={[containerClass]}
+  data-toc
+  data-selector={selector}
+  data-max-depth={maxDepth}
+  data-numbered={numbered ? 'true' : 'false'}
+  data-offset={offset}
+  data-smooth={smooth ? 'true' : 'false'}
+  data-highlight={highlightActive ? 'true' : 'false'}
+  style={sticky ? `top:${offset}px` : undefined}
+  {...rest}
+>
+  {collapsible ? (
+    <details open>
+      {showTitle && (
+        <summary class:list={[titleClass, 'cursor-pointer list-none']}>
+          {title}
+        </summary>
+      )}
+      <nav aria-label={title} data-toc-nav class={numbered ? 'toc-numbered' : ''}></nav>
+    </details>
+  ) : (
+    <>
+      {showTitle && <p class={titleClass}>{title}</p>}
+      <nav aria-label={title} data-toc-nav class={numbered ? 'toc-numbered' : ''}></nav>
+    </>
+  )}
+  <p data-toc-empty hidden class="text-[var(--bricks-color-text-faint,#94a3b8)]">
+    Aucune section détectée.
+  </p>
+</aside>
+
+<style>
+  [data-toc] :global(.toc-list) {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  [data-toc] :global(.toc-list .toc-list) {
+    padding-left: 0.85rem;
+  }
+  [data-toc] :global(.toc-link) {
+    display: block;
+    padding: 0.2rem 0;
+    text-decoration: none;
+    line-height: 1.35;
+    color: var(--bricks-color-text-muted, #475569);
+    border-left: 2px solid transparent;
+    padding-left: 0.6rem;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  [data-toc] :global(.toc-link:hover) {
+    color: var(--bricks-color-text, #0f172a);
+  }
+  [data-toc] :global(.toc-link.is-active) {
+    color: var(--bricks-color-accent, #2563eb);
+    border-left-color: var(--bricks-color-accent, #2563eb);
+    font-weight: 600;
+  }
+  [data-toc] :global(.toc-numbered .toc-list) {
+    counter-reset: toc;
+  }
+  [data-toc] :global(.toc-numbered .toc-link::before) {
+    counter-increment: toc;
+    content: counters(toc, '.') '. ';
+    color: var(--bricks-color-text-faint, #94a3b8);
+  }
+</style>
+
+<script>
+  function slugify(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '')
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+  }
+
+  function setupToc(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const selector = root.dataset.selector || 'h2, h3';
+    const maxDepth = Number(root.dataset.maxDepth ?? 3);
+    const offset = Number(root.dataset.offset ?? 80);
+    const smooth = root.dataset.smooth === 'true';
+    const highlight = root.dataset.highlight === 'true';
+    const nav = root.querySelector<HTMLElement>('[data-toc-nav]');
+    const empty = root.querySelector<HTMLElement>('[data-toc-empty]');
+    if (!nav) return;
+
+    // Zone de contenu = le <main>, sinon le parent du bloc, sinon le body.
+    const scope =
+      document.querySelector('main') || root.parentElement || document.body;
+    const headings = Array.from(
+      scope.querySelectorAll<HTMLElement>(selector)
+    ).filter((h) => !root.contains(h));
+
+    if (headings.length === 0) {
+      nav.hidden = true;
+      if (empty) empty.hidden = false;
+      return;
+    }
+
+    // Niveau de base = le plus petit niveau de titre présent.
+    const levels = headings.map((h) => Number(h.tagName.slice(1)));
+    const baseLevel = Math.min(...levels);
+    const usedIds = new Set<string>();
+
+    const rootList = document.createElement('ul');
+    rootList.className = 'toc-list';
+    const listStack: { list: HTMLUListElement; level: number }[] = [
+      { list: rootList, level: baseLevel - 1 },
+    ];
+
+    for (const h of headings) {
+      const level = Number(h.tagName.slice(1));
+      if (level - baseLevel + 1 > maxDepth) continue;
+
+      if (!h.id) {
+        let base = slugify(h.textContent || 'section') || 'section';
+        let id = base;
+        let n = 2;
+        while (usedIds.has(id) || document.getElementById(id)) {
+          id = `${base}-${n++}`;
+        }
+        h.id = id;
+      }
+      usedIds.add(h.id);
+      h.style.scrollMarginTop = `${offset}px`;
+
+      while (
+        listStack.length > 1 &&
+        listStack[listStack.length - 1].level >= level
+      ) {
+        listStack.pop();
+      }
+      let parent = listStack[listStack.length - 1];
+      while (parent.level < level - 1) {
+        const li = parent.list.lastElementChild || parent.list;
+        const sub = document.createElement('ul');
+        sub.className = 'toc-list';
+        li.appendChild(sub);
+        parent = { list: sub, level: parent.level + 1 };
+        listStack.push(parent);
+      }
+
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = `#${h.id}`;
+      a.className = 'toc-link';
+      a.textContent = h.textContent;
+      a.dataset.target = h.id;
+      li.appendChild(a);
+      parent.list.appendChild(li);
+    }
+
+    nav.appendChild(rootList);
+
+    if (smooth) {
+      nav.addEventListener('click', (e) => {
+        const link = (e.target as HTMLElement).closest('a.toc-link');
+        if (!link) return;
+        const id = (link as HTMLAnchorElement).dataset.target;
+        const target = id && document.getElementById(id);
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          history.replaceState(null, '', `#${id}`);
+        }
+      });
+    }
+
+    if (highlight && 'IntersectionObserver' in window) {
+      const linkById = new Map<string, HTMLElement>();
+      nav
+        .querySelectorAll<HTMLElement>('a.toc-link')
+        .forEach((a) => linkById.set(a.dataset.target!, a));
+      const observer = new IntersectionObserver(
+        (entries) => {
+          for (const entry of entries) {
+            const link = linkById.get(entry.target.id);
+            if (!link) continue;
+            if (entry.isIntersecting) {
+              nav
+                .querySelectorAll('.toc-link.is-active')
+                .forEach((el) => el.classList.remove('is-active'));
+              link.classList.add('is-active');
+            }
+          }
+        },
+        { rootMargin: `-${offset}px 0px -70% 0px`, threshold: 0 }
+      );
+      headings.forEach((h) => {
+        if (linkById.has(h.id)) observer.observe(h);
+      });
+    }
+  }
+
+  function initAllToc() {
+    document
+      .querySelectorAll<HTMLElement>('[data-toc]')
+      .forEach((el) => setupToc(el));
+  }
+
+  initAllToc();
+  document.addEventListener('astro:page-load', initAllToc);
+</script>

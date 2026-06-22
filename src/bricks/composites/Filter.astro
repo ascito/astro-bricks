@@ -1,0 +1,212 @@
+---
+/**
+ * filter — Contrôles de filtrage.
+ *
+ * Schema catalog : {
+ *   fields?, layout?, showReset?, showApply?, instant?, collapsible?
+ * }
+ *
+ * <form> natif rendant un contrôle par entrée de `fields` (select, checkbox,
+ * radio, range, ou input texte selon `type`). Le serveur rend la coquille ;
+ * un script client réinitialise les champs (reset), et — si `instant` — émet
+ * un évènement `filter:change` avec l'état courant (pour brancher le filtrage
+ * côté app). `collapsible` rend le bloc repliable via <details>.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour les contrôles
+ * et le focus-ring, border/surface/text) avec fallbacks.
+ */
+interface FilterOption {
+  value: string;
+  label?: string;
+}
+
+interface FilterField {
+  name: string;
+  label?: string;
+  type?: 'select' | 'checkbox' | 'radio' | 'range' | 'text';
+  options?: (FilterOption | string)[];
+  value?: string;
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+interface Props {
+  /** Champs de filtrage. Défaut : []. */
+  fields?: FilterField[];
+  /** Disposition. Défaut : "horizontal". */
+  layout?: 'horizontal' | 'vertical' | 'sidebar';
+  /** Afficher le bouton réinitialiser. Défaut : true. */
+  showReset?: boolean;
+  /** Afficher le bouton appliquer. Défaut : false. */
+  showApply?: boolean;
+  /** Appliquer instantanément. Défaut : true. */
+  instant?: boolean;
+  /** Bloc repliable. Défaut : false. */
+  collapsible?: boolean;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  fields = [],
+  layout = 'horizontal',
+  showReset = true,
+  showApply = false,
+  instant = true,
+  collapsible = false,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const uid = _brickId ?? Math.random().toString(36).slice(2, 8);
+
+const normalize = (opts: (FilterOption | string)[] = []) =>
+  opts.map((o) => (typeof o === 'string' ? { value: o, label: o } : { value: o.value, label: o.label ?? o.value }));
+
+const layoutClass = {
+  horizontal: 'flex flex-wrap items-end gap-4',
+  vertical: 'flex flex-col gap-4',
+  sidebar: 'flex flex-col gap-5',
+}[layout];
+
+const labelClass =
+  'mb-1.5 block font-sans text-sm font-semibold tracking-tight text-[var(--bricks-color-text,#0f172a)]';
+const controlClass = [
+  'rounded-lg border border-[var(--bricks-color-border,#e2e8f0)] px-3 py-2 text-sm',
+  'bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text,#0f172a)]',
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+].join(' ');
+const accentControl = 'h-4 w-4 text-[var(--bricks-color-accent,#2563eb)] focus-visible:ring-[var(--bricks-color-accent,#2563eb)]';
+---
+
+<form
+  data-filter
+  data-instant={instant ? 'true' : 'false'}
+  class="mb-6 w-full rounded-xl border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] p-4 sm:p-5"
+  {...rest}
+>
+  <details open={collapsible || undefined} class:list={[!collapsible && 'contents']}>
+    {collapsible && (
+      <summary class:list={[labelClass, 'mb-3 cursor-pointer list-none']}>Filtres</summary>
+    )}
+    <div class:list={[layoutClass]}>
+    {fields.map((field) => {
+      const type = field.type ?? 'text';
+      const fid = `filter-${field.name}-${uid}`;
+      const opts = normalize(field.options);
+      return (
+        <div class="min-w-[10rem]">
+          {field.label && (type === 'select' || type === 'range' || type === 'text') && (
+            <label for={fid} class={labelClass}>{field.label}</label>
+          )}
+
+          {type === 'select' ? (
+            <select id={fid} name={field.name} class:list={[controlClass, 'w-full']}>
+              {field.placeholder && <option value="">{field.placeholder}</option>}
+              {opts.map((o) => <option value={o.value} selected={field.value === o.value}>{o.label}</option>)}
+            </select>
+          ) : type === 'range' ? (
+            <input
+              type="range"
+              id={fid}
+              name={field.name}
+              min={field.min ?? 0}
+              max={field.max ?? 100}
+              step={field.step ?? 1}
+              value={field.value}
+              class:list={['w-full', accentControl]}
+            />
+          ) : type === 'checkbox' ? (
+            <fieldset>
+              {field.label && <legend class={labelClass}>{field.label}</legend>}
+              <div class="space-y-1.5">
+                {opts.map((o) => (
+                  <label class="flex items-center gap-2 text-sm text-[var(--bricks-color-text,#0f172a)]">
+                    <input type="checkbox" name={`${field.name}[]`} value={o.value} class:list={['rounded', accentControl]} />
+                    <span>{o.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : type === 'radio' ? (
+            <fieldset>
+              {field.label && <legend class={labelClass}>{field.label}</legend>}
+              <div class="space-y-1.5">
+                {opts.map((o) => (
+                  <label class="flex items-center gap-2 text-sm text-[var(--bricks-color-text,#0f172a)]">
+                    <input type="radio" name={field.name} value={o.value} checked={field.value === o.value} class={accentControl} />
+                    <span>{o.label}</span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          ) : (
+            <input
+              type="text"
+              id={fid}
+              name={field.name}
+              value={field.value}
+              placeholder={field.placeholder}
+              class:list={[controlClass, 'w-full']}
+            />
+          )}
+        </div>
+      );
+    })}
+
+    {(showApply || showReset) && (
+      <div class="flex items-end gap-2">
+        {showApply && (
+          <button type="submit" class="rounded-lg bg-[var(--bricks-color-accent,#2563eb)] px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]">
+            Appliquer
+          </button>
+        )}
+        {showReset && (
+          <button type="reset" data-filter-reset class="rounded-lg border border-[var(--bricks-color-border,#e2e8f0)] px-4 py-2 text-sm font-medium text-[var(--bricks-color-text,#0f172a)] transition-colors hover:bg-[var(--bricks-color-muted,#f1f5f9)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]">
+            Réinitialiser
+          </button>
+        )}
+      </div>
+    )}
+    </div>
+  </details>
+</form>
+
+<script>
+  function setupFilter(form: HTMLElement) {
+    if (form.dataset.initialized === 'true') return;
+    form.dataset.initialized = 'true';
+
+    const instant = form.dataset.instant === 'true';
+
+    const emit = () => {
+      const data = new FormData(form as HTMLFormElement);
+      const state: Record<string, FormDataEntryValue | FormDataEntryValue[]> = {};
+      for (const key of new Set(data.keys())) {
+        const all = data.getAll(key);
+        state[key] = all.length > 1 ? all : all[0];
+      }
+      form.dispatchEvent(new CustomEvent('filter:change', { bubbles: true, detail: state }));
+    };
+
+    if (instant) {
+      form.addEventListener('input', emit);
+      form.addEventListener('change', emit);
+    }
+
+    form.addEventListener('reset', () => {
+      // Laisse le DOM se réinitialiser avant d'émettre l'état vide.
+      if (instant) setTimeout(emit, 0);
+    });
+  }
+
+  function initAllFilter() {
+    document.querySelectorAll<HTMLElement>('[data-filter]').forEach((el) => setupFilter(el));
+  }
+
+  initAllFilter();
+  document.addEventListener('astro:page-load', initAllFilter);
+</script>

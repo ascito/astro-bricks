@@ -1,0 +1,216 @@
+---
+/**
+ * register-form — Formulaire d'inscription.
+ *
+ * Schema catalog : {
+ *   action?, method?, title?, subtitle?, fields?, labels?, submitLabel?,
+ *   showTerms?, termsLabel?, termsUrl?, showLogin?, loginLabel?, loginUrl?,
+ *   socialProviders?, variant?, error?
+ * }
+ *
+ * <form> natif. `fields` active/désactive des champs optionnels (name, email,
+ * password, passwordConfirm) ; par défaut name + email + password + confirmation.
+ * `labels` surcharge les libellés. Validation HTML5 (required, type=email,
+ * minlength). Acceptation des conditions via checkbox required.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour le bouton et
+ * le focus-ring, border/surface/text pour les champs, danger pour l'erreur).
+ */
+interface RegisterFields {
+  name?: boolean;
+  email?: boolean;
+  password?: boolean;
+  passwordConfirm?: boolean;
+}
+
+interface RegisterLabels {
+  name?: string;
+  email?: string;
+  password?: string;
+  passwordConfirm?: string;
+}
+
+interface Props {
+  /** URL de soumission. Défaut : "/register". */
+  action?: string;
+  /** Méthode HTTP. Défaut : "post". */
+  method?: 'post' | 'get';
+  /** Titre du bloc. Défaut : "Créer un compte". */
+  title?: string;
+  /** Sous-titre. */
+  subtitle?: string;
+  /** Champs à afficher. Défaut : tous activés. */
+  fields?: RegisterFields;
+  /** Libellés personnalisés des champs. */
+  labels?: RegisterLabels;
+  /** Label du bouton de soumission. Défaut : "S'inscrire". */
+  submitLabel?: string;
+  /** Afficher l'acceptation des conditions. Défaut : true. */
+  showTerms?: boolean;
+  /** Label des conditions. Défaut : "J'accepte les conditions d'utilisation". */
+  termsLabel?: string;
+  /** URL des conditions. Défaut : "/terms". */
+  termsUrl?: string;
+  /** Afficher le lien connexion. Défaut : true. */
+  showLogin?: boolean;
+  /** Label invitation connexion. Défaut : "Déjà un compte ?". */
+  loginLabel?: string;
+  /** URL connexion. Défaut : "/login". */
+  loginUrl?: string;
+  /** Fournisseurs de connexion sociale. */
+  socialProviders?: string[];
+  /** Variante visuelle. Défaut : "card". */
+  variant?: 'default' | 'card' | 'minimal';
+  /** Message d'erreur global. */
+  error?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  action = '/register',
+  method = 'post',
+  title = 'Créer un compte',
+  subtitle,
+  fields = {},
+  labels = {},
+  submitLabel = "S'inscrire",
+  showTerms = true,
+  termsLabel = "J'accepte les conditions d'utilisation",
+  termsUrl = '/terms',
+  showLogin = true,
+  loginLabel = 'Déjà un compte ?',
+  loginUrl = '/login',
+  socialProviders = [],
+  variant = 'card',
+  error,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const f = {
+  name: fields.name ?? true,
+  email: fields.email ?? true,
+  password: fields.password ?? true,
+  passwordConfirm: fields.passwordConfirm ?? true,
+};
+const lbl = {
+  name: labels.name ?? 'Nom complet',
+  email: labels.email ?? 'Email',
+  password: labels.password ?? 'Mot de passe',
+  passwordConfirm: labels.passwordConfirm ?? 'Confirmer le mot de passe',
+};
+
+const uid = _brickId ?? Math.random().toString(36).slice(2, 8);
+const ids = {
+  name: `reg-name-${uid}`,
+  email: `reg-email-${uid}`,
+  password: `reg-password-${uid}`,
+  passwordConfirm: `reg-password-confirm-${uid}`,
+  terms: `reg-terms-${uid}`,
+};
+
+const containerClass = {
+  default: 'mb-6 w-full max-w-md',
+  card: 'mb-6 w-full max-w-md rounded-xl border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] p-6 sm:p-8 shadow-sm',
+  minimal: 'mb-6 w-full max-w-md',
+}[variant];
+
+const labelClass =
+  'mb-1.5 block font-sans text-sm font-semibold tracking-tight text-[var(--bricks-color-text,#0f172a)]';
+const inputClass = [
+  'block w-full rounded-lg border border-[var(--bricks-color-border,#e2e8f0)] px-3.5 py-2.5 text-sm',
+  'bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text,#0f172a)]',
+  'placeholder:text-[var(--bricks-color-text-faint,#94a3b8)] transition-colors duration-150',
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+].join(' ');
+const submitClass = [
+  'w-full rounded-lg px-4 py-2.5 text-sm font-semibold text-white',
+  'bg-[var(--bricks-color-accent,#2563eb)] transition-opacity duration-150 hover:opacity-90',
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]',
+].join(' ');
+const linkClass = 'text-[var(--bricks-color-accent,#2563eb)] hover:underline';
+---
+
+<div class={containerClass} {...rest}>
+  {(title || subtitle) && (
+    <div class="mb-6">
+      {title && <h2 class="font-sans text-xl font-extrabold tracking-tight text-[var(--bricks-color-text,#0f172a)]">{title}</h2>}
+      {subtitle && <p class="mt-1 text-sm text-[var(--bricks-color-text-muted,#475569)]">{subtitle}</p>}
+    </div>
+  )}
+
+  {error && (
+    <p role="alert" class="mb-4 rounded-lg border border-[var(--bricks-color-danger,#dc2626)] bg-[var(--bricks-color-danger,#dc2626)]/10 px-3.5 py-2.5 text-sm text-[var(--bricks-color-danger,#dc2626)]">{error}</p>
+  )}
+
+  <form action={action} method={method} class="space-y-4">
+    {f.name && (
+      <div>
+        <label for={ids.name} class={labelClass}>{lbl.name}</label>
+        <input type="text" id={ids.name} name="name" required autocomplete="name" class={inputClass} />
+      </div>
+    )}
+    {f.email && (
+      <div>
+        <label for={ids.email} class={labelClass}>{lbl.email}</label>
+        <input type="email" id={ids.email} name="email" required autocomplete="email" class={inputClass} />
+      </div>
+    )}
+    {f.password && (
+      <div>
+        <label for={ids.password} class={labelClass}>{lbl.password}</label>
+        <input type="password" id={ids.password} name="password" required minlength="8" autocomplete="new-password" class={inputClass} />
+      </div>
+    )}
+    {f.passwordConfirm && (
+      <div>
+        <label for={ids.passwordConfirm} class={labelClass}>{lbl.passwordConfirm}</label>
+        <input type="password" id={ids.passwordConfirm} name="password_confirmation" required minlength="8" autocomplete="new-password" class={inputClass} />
+      </div>
+    )}
+
+    {showTerms && (
+      <label class="flex items-start gap-2 text-sm text-[var(--bricks-color-text-muted,#475569)]">
+        <input
+          type="checkbox"
+          id={ids.terms}
+          name="terms"
+          value="1"
+          required
+          class="mt-0.5 h-4 w-4 rounded border-[var(--bricks-color-border,#e2e8f0)] text-[var(--bricks-color-accent,#2563eb)] focus-visible:ring-[var(--bricks-color-accent,#2563eb)]"
+        />
+        <span>{termsLabel} <a href={termsUrl} class={linkClass}>(lire)</a></span>
+      </label>
+    )}
+
+    <button type="submit" class={submitClass}>{submitLabel}</button>
+  </form>
+
+  {socialProviders.length > 0 && (
+    <div class="mt-5">
+      <div class="relative my-4 text-center text-xs text-[var(--bricks-color-text-muted,#475569)]">
+        <span class="relative z-10 bg-[var(--bricks-color-surface,#ffffff)] px-2">ou</span>
+        <span class="absolute inset-x-0 top-1/2 -z-0 h-px -translate-y-1/2 bg-[var(--bricks-color-border,#e2e8f0)]"></span>
+      </div>
+      <div class="space-y-2">
+        {socialProviders.map((provider) => (
+          <button
+            type="button"
+            data-provider={provider}
+            class="w-full rounded-lg border border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)] px-4 py-2.5 text-sm font-medium capitalize text-[var(--bricks-color-text,#0f172a)] transition-colors hover:bg-[var(--bricks-color-muted,#f1f5f9)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[var(--bricks-color-accent,#2563eb)]"
+          >
+            Continuer avec {provider}
+          </button>
+        ))}
+      </div>
+    </div>
+  )}
+
+  {showLogin && (
+    <p class="mt-6 text-center text-sm text-[var(--bricks-color-text-muted,#475569)]">
+      {loginLabel} <a href={loginUrl} class={linkClass}>Se connecter</a>
+    </p>
+  )}
+</div>

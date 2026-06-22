@@ -1,0 +1,171 @@
+---
+/**
+ * spinner — Indicateur de chargement.
+ *
+ * Schema catalog : {
+ *   variant?, size?, color?, label?, overlay?, centered?, className?, id?
+ * }
+ *
+ * Fonctionnement : pur CSS, zéro JS. Quatre variantes d'animation (circle = anneau
+ * tournant via `animate-spin`, dots = trois points pulsés en décalé, pulse = disque
+ * qui respire via `animate-pulse`, bars = trois barres scalées). `overlay` couvre le
+ * conteneur parent positionné d'un voile semi-transparent ; `centered` centre le
+ * spinner dans son parent. Sans overlay/centered, l'élément est inline-flex en flux.
+ *
+ * Théming : consomme `--bricks-color-accent` (primary), `--bricks-color-secondary`,
+ * et `--bricks-color-surface` (overlay) avec fallbacks ; `white`/`current` ne
+ * passent pas par les variables.
+ */
+interface Props {
+  /** Type de spinner. Défaut : "circle". */
+  variant?: 'circle' | 'dots' | 'pulse' | 'bars';
+  /** Taille. Défaut : "md". */
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Couleur. Défaut : "primary". */
+  color?: 'primary' | 'secondary' | 'white' | 'current';
+  /** Texte optionnel sous le spinner. */
+  label?: string;
+  /** Afficher sur un overlay semi-transparent couvrant le parent. Défaut : false. */
+  overlay?: boolean;
+  /** Centrer dans le conteneur parent. Défaut : false. */
+  centered?: boolean;
+  /** Override des classes du conteneur racine. */
+  className?: string;
+  /** ID HTML. */
+  id?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  variant = 'circle',
+  size = 'md',
+  color = 'primary',
+  label,
+  overlay = false,
+  centered = false,
+  className = '',
+  id,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const sizePx = { xs: 16, sm: 20, md: 28, lg: 40, xl: 56 }[size];
+
+const colorValue = {
+  primary: 'var(--bricks-color-accent,#2563eb)',
+  secondary: 'var(--bricks-color-secondary,#64748b)',
+  white: '#ffffff',
+  current: 'currentColor',
+}[color];
+
+const wrapperClass = overlay
+  ? [
+      'absolute inset-0 z-30 flex flex-col items-center justify-center gap-2',
+      'bg-[var(--bricks-color-surface,#ffffff)]/70 backdrop-blur-sm',
+    ].join(' ')
+  : [
+      'inline-flex flex-col items-center gap-2 mb-6',
+      centered ? 'w-full justify-center' : '',
+    ]
+      .filter(Boolean)
+      .join(' ');
+---
+
+<div
+  id={id}
+  role="status"
+  aria-live="polite"
+  aria-label={label ?? 'Chargement'}
+  class:list={[wrapperClass, className]}
+  style={`--spinner-size:${sizePx}px;--spinner-color:${colorValue}`}
+  {...rest}
+>
+  {variant === 'circle' && (
+    <span class="spinner-circle" aria-hidden="true"></span>
+  )}
+  {variant === 'dots' && (
+    <span class="spinner-dots" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </span>
+  )}
+  {variant === 'pulse' && (
+    <span class="spinner-pulse" aria-hidden="true"></span>
+  )}
+  {variant === 'bars' && (
+    <span class="spinner-bars" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </span>
+  )}
+  {label && (
+    <span class="text-sm text-[var(--bricks-color-text-muted,#475569)]">{label}</span>
+  )}
+</div>
+
+<style>
+  .spinner-circle {
+    display: inline-block;
+    width: var(--spinner-size);
+    height: var(--spinner-size);
+    border: calc(var(--spinner-size) / 8) solid color-mix(in srgb, var(--spinner-color) 25%, transparent);
+    border-top-color: var(--spinner-color);
+    border-radius: 9999px;
+    animation: spinner-spin 0.7s linear infinite;
+  }
+  .spinner-pulse {
+    display: inline-block;
+    width: var(--spinner-size);
+    height: var(--spinner-size);
+    background: var(--spinner-color);
+    border-radius: 9999px;
+    animation: spinner-pulse 1s ease-in-out infinite;
+  }
+  .spinner-dots {
+    display: inline-flex;
+    gap: calc(var(--spinner-size) / 5);
+  }
+  .spinner-dots span {
+    width: calc(var(--spinner-size) / 3.2);
+    height: calc(var(--spinner-size) / 3.2);
+    background: var(--spinner-color);
+    border-radius: 9999px;
+    animation: spinner-bounce 1.2s ease-in-out infinite;
+  }
+  .spinner-dots span:nth-child(2) { animation-delay: 0.16s; }
+  .spinner-dots span:nth-child(3) { animation-delay: 0.32s; }
+  .spinner-bars {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: calc(var(--spinner-size) / 6);
+    height: var(--spinner-size);
+  }
+  .spinner-bars span {
+    width: calc(var(--spinner-size) / 5);
+    height: 100%;
+    background: var(--spinner-color);
+    border-radius: 2px;
+    animation: spinner-stretch 1s ease-in-out infinite;
+  }
+  .spinner-bars span:nth-child(2) { animation-delay: 0.12s; }
+  .spinner-bars span:nth-child(3) { animation-delay: 0.24s; }
+  @keyframes spinner-spin {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes spinner-pulse {
+    0%, 100% { transform: scale(0.6); opacity: 0.5; }
+    50% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes spinner-bounce {
+    0%, 80%, 100% { transform: scale(0.5); opacity: 0.5; }
+    40% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes spinner-stretch {
+    0%, 100% { transform: scaleY(0.4); }
+    50% { transform: scaleY(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .spinner-circle, .spinner-pulse,
+    .spinner-dots span, .spinner-bars span { animation-duration: 2s; }
+  }
+</style>

@@ -1,0 +1,162 @@
+---
+/**
+ * pricing-card — Carte de tarification avec prix et features.
+ *
+ * Schema catalog : {
+ *   title?, subtitle?, price?, currency?, period?,
+ *   features? [string | {label, included?}], cta? {label, href, variant?},
+ *   popular?, popularLabel?, variant?, color?
+ * }
+ *
+ * Théming : consomme les variables `--bricks-color-*` (surface/border pour le cadre,
+ * accent pour le badge "populaire" + CTA primaire, text/text-muted pour le corps) avec fallbacks.
+ */
+interface Feature {
+  label: string;
+  /** Feature incluse (✓) ou non (✕). Défaut : true. */
+  included?: boolean;
+}
+interface Cta {
+  label?: string;
+  href?: string;
+  variant?: 'primary' | 'secondary' | 'outline';
+}
+
+interface Props {
+  /** Nom du plan. Défaut : 'Standard'. */
+  title?: string;
+  /** Description courte. */
+  subtitle?: string;
+  /** Prix. Défaut : '0'. */
+  price?: string;
+  /** Symbole monétaire. Défaut : '€'. */
+  currency?: string;
+  /** Période (/mois, /an, /personne). */
+  period?: string;
+  /** Liste de features (string ou objet). */
+  features?: (string | Feature)[];
+  /** Bouton d'action. */
+  cta?: Cta;
+  /** Mettre en avant. Défaut : false. */
+  popular?: boolean;
+  /** Label du badge. Défaut : 'Populaire'. */
+  popularLabel?: string;
+  /** Style. Défaut : 'elevated'. */
+  variant?: 'default' | 'outlined' | 'elevated' | 'filled';
+  /** Couleur. Défaut : 'default'. */
+  color?: 'default' | 'primary' | 'secondary' | 'success';
+  /** Classes additionnelles. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title = 'Standard',
+  subtitle,
+  price = '0',
+  currency = '€',
+  period,
+  features = [],
+  cta = { label: 'Choisir', href: '#', variant: 'primary' },
+  popular = false,
+  popularLabel = 'Populaire',
+  variant = 'elevated',
+  color = 'default',
+  class: customClass = '',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const VARIANT_MAP: Record<string, string> = {
+  default: 'border border-[var(--bricks-color-border,#e2e8f0)]',
+  outlined: 'border-2 border-[var(--bricks-color-border,#cbd5e1)]',
+  elevated: 'border border-[var(--bricks-color-border,#e2e8f0)] shadow-lg',
+  filled: 'border border-transparent bg-[var(--bricks-color-muted,#f8fafc)]',
+};
+
+const normFeatures: Feature[] = features.map((f) =>
+  typeof f === 'string' ? { label: f, included: true } : { included: true, ...f }
+);
+
+const ctaVariant = cta?.variant ?? 'primary';
+const ctaClass = {
+  primary:
+    'bg-[var(--bricks-color-accent,#2563eb)] text-white hover:opacity-90',
+  secondary:
+    'bg-[var(--bricks-color-muted,#f1f5f9)] text-[var(--bricks-color-text,#0f172a)] hover:opacity-90',
+  outline:
+    'border border-[var(--bricks-color-accent,#2563eb)] text-[var(--bricks-color-accent,#2563eb)] hover:bg-[var(--bricks-color-muted,#f1f5f9)]',
+}[ctaVariant];
+---
+<article
+  data-brick="pricing-card"
+  data-color={color}
+  class:list={[
+    'relative mb-12 flex flex-col rounded-2xl p-6 sm:p-8',
+    'bg-[var(--bricks-color-surface,#ffffff)]',
+    VARIANT_MAP[variant] ?? VARIANT_MAP.elevated,
+    popular ? 'ring-2 ring-[var(--bricks-color-accent,#2563eb)]' : '',
+    customClass,
+  ]}
+  {...rest}
+>
+  {popular && (
+    <span class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--bricks-color-accent,#2563eb)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-white shadow">
+      {popularLabel}
+    </span>
+  )}
+
+  <header class="text-center">
+    <h3 class="font-sans font-extrabold tracking-tight text-xl text-[var(--bricks-color-text,#0f172a)]">
+      {title}
+    </h3>
+    {subtitle && (
+      <p class="mt-1 text-sm text-[var(--bricks-color-text-muted,#475569)]">{subtitle}</p>
+    )}
+    <div class="mt-4 flex items-baseline justify-center gap-1">
+      <span class="font-sans font-extrabold text-4xl text-[var(--bricks-color-text,#0f172a)]">
+        {currency}{price}
+      </span>
+      {period && (
+        <span class="text-sm text-[var(--bricks-color-text-muted,#475569)]">{period}</span>
+      )}
+    </div>
+  </header>
+
+  {normFeatures.length > 0 && (
+    <ul class="mt-6 space-y-3 text-sm">
+      {normFeatures.map((f) => (
+        <li class="flex items-start gap-2.5">
+          <span
+            aria-hidden="true"
+            class:list={[
+              'mt-0.5 flex-shrink-0 font-bold',
+              f.included
+                ? 'text-[var(--bricks-color-accent,#16a34a)]'
+                : 'text-[var(--bricks-color-text-faint,#94a3b8)]',
+            ]}
+          >{f.included ? '✓' : '✕'}</span>
+          <span class:list={[
+            f.included
+              ? 'text-[var(--bricks-color-text,#0f172a)]'
+              : 'text-[var(--bricks-color-text-faint,#94a3b8)] line-through',
+          ]}>{f.label}</span>
+        </li>
+      ))}
+    </ul>
+  )}
+
+  {cta?.href && cta?.label && (
+    <a
+      href={cta.href}
+      class:list={[
+        'mt-8 block rounded-lg px-5 py-3 text-center text-sm font-semibold transition',
+        ctaClass,
+      ]}
+    >
+      {cta.label}
+    </a>
+  )}
+</article>

@@ -1,0 +1,52 @@
+---
+/**
+ * center — Conteneur centré avec largeur max.
+ * Schema catalog : { maxWidth?, padding?, gutters?, intrinsic? }
+ * Slot : children (wrapper de layout, pas de marge imposée).
+ */
+interface Props {
+  /** Largeur max (valeur CSS, ex: "1200px", "60ch"). Défaut : "1200px". */
+  maxWidth?: string;
+  /** Padding horizontal (valeur CSS). Défaut : "1rem". */
+  padding?: string;
+  /** Ajoute des gouttières horizontales. Défaut : true. */
+  gutters?: boolean;
+  /** Centrage intrinsèque (centre aussi les enfants en colonne). Défaut : false. */
+  intrinsic?: boolean;
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  maxWidth = '1200px',
+  padding = '1rem',
+  gutters = true,
+  intrinsic = false,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const style = [
+  `max-width:${maxWidth}`,
+  gutters ? `padding-left:${padding}` : null,
+  gutters ? `padding-right:${padding}` : null,
+]
+  .filter(Boolean)
+  .join(';');
+---
+
+<div
+  class:list={[
+    'mx-auto w-full',
+    intrinsic ? 'flex flex-col items-center' : '',
+    customClass,
+  ]}
+  style={style}
+  {...rest}
+>
+  <slot name="children" />
+  <slot />
+</div>

@@ -1,0 +1,254 @@
+---
+/**
+ * modal — Fenêtre modale avec overlay.
+ *
+ * Schema catalog : {
+ *   id?, title?, open?, size?, closable?, closeOnOverlay?, closeOnEscape?,
+ *   variant?, showFooter?, confirmLabel?, cancelLabel?, confirmVariant?, className?
+ * }
+ *
+ * Fonctionnement : élément natif `<dialog>`. Un bouton externe ciblant `#id` (ou
+ * `[data-modal-open="id"]`) appelle `showModal()`. Le backdrop natif (`::backdrop`)
+ * sert d'overlay ; `closeOnOverlay` ferme au clic dans la zone backdrop, `closeOnEscape`
+ * laisse/annule le `cancel` natif (Escape). Le contenu vient du slot par défaut ; le
+ * footer (slot `footer` ou boutons Confirmer/Annuler) émet un CustomEvent `modal:confirm`.
+ * Script suivant le pattern TableOfContents (ré-init `astro:page-load` + guard
+ * `dataset.initialized`).
+ *
+ * Théming : `--bricks-color-surface` (panneau), `--bricks-color-border`,
+ * `--bricks-color-text`, `--bricks-color-accent` (CTA primary) avec fallbacks.
+ */
+interface Props {
+  /** ID unique pour le ciblage JS. */
+  id?: string;
+  /** Titre de la modale. */
+  title?: string;
+  /** Ouverte par défaut. Défaut : false. */
+  open?: boolean;
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  /** Afficher le bouton de fermeture. Défaut : true. */
+  closable?: boolean;
+  /** Fermer au clic sur l'overlay. Défaut : true. */
+  closeOnOverlay?: boolean;
+  /** Fermer avec Escape. Défaut : true. */
+  closeOnEscape?: boolean;
+  /** Variante d'ancrage. Défaut : "default". */
+  variant?: 'default' | 'centered' | 'drawer-right' | 'drawer-left';
+  /** Afficher le footer d'actions. Défaut : true. */
+  showFooter?: boolean;
+  /** Libellé du bouton de confirmation. Défaut : "Confirmer". */
+  confirmLabel?: string;
+  /** Libellé du bouton d'annulation. Défaut : "Annuler". */
+  cancelLabel?: string;
+  /** Style du bouton de confirmation. Défaut : "primary". */
+  confirmVariant?: 'primary' | 'danger' | 'success';
+  /** Override des classes du panneau. */
+  className?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  id,
+  title,
+  open = false,
+  size = 'md',
+  closable = true,
+  closeOnOverlay = true,
+  closeOnEscape = true,
+  variant = 'default',
+  showFooter = true,
+  confirmLabel = 'Confirmer',
+  cancelLabel = 'Annuler',
+  confirmVariant = 'primary',
+  className = '',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const modalId = id || `modal-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+const titleId = `${modalId}-title`;
+
+const sizeClass = {
+  sm: 'max-w-sm',
+  md: 'max-w-md',
+  lg: 'max-w-lg',
+  xl: 'max-w-2xl',
+  full: 'max-w-[calc(100vw-2rem)] w-full',
+}[size];
+
+const anchorClass = {
+  default: 'modal-anchor-center',
+  centered: 'modal-anchor-center',
+  'drawer-right': 'modal-anchor-right',
+  'drawer-left': 'modal-anchor-left',
+}[variant];
+
+const confirmClass = {
+  primary: 'bg-[var(--bricks-color-accent,#2563eb)] text-white hover:opacity-90',
+  danger: 'bg-red-600 text-white hover:bg-red-700',
+  success: 'bg-green-600 text-white hover:bg-green-700',
+}[confirmVariant];
+---
+
+<dialog
+  id={modalId}
+  data-modal
+  data-close-overlay={closeOnOverlay ? 'true' : 'false'}
+  data-close-escape={closeOnEscape ? 'true' : 'false'}
+  data-open-initial={open ? 'true' : 'false'}
+  aria-labelledby={title ? titleId : undefined}
+  class:list={[
+    'modal-dialog w-full p-0',
+    sizeClass,
+    anchorClass,
+    'rounded-lg border border-[var(--bricks-color-border,#e2e8f0)]',
+    'bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text,#0f172a)] shadow-xl',
+    className,
+  ]}
+  {...rest}
+>
+  <form method="dialog" class="flex max-h-[85vh] flex-col">
+    {(title || closable) && (
+      <header class="flex items-center justify-between gap-4 border-b border-[var(--bricks-color-border,#e2e8f0)] px-6 py-4">
+        {title && (
+          <h2 id={titleId} class="font-sans font-extrabold tracking-tight text-lg">
+            {title}
+          </h2>
+        )}
+        {closable && (
+          <button
+            type="button"
+            data-modal-close
+            aria-label="Fermer"
+            class="ml-auto rounded text-2xl leading-none text-[var(--bricks-color-text-muted,#475569)] transition hover:text-[var(--bricks-color-text,#0f172a)] focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            ×
+          </button>
+        )}
+      </header>
+    )}
+
+    <div class="overflow-y-auto px-6 py-5 text-[var(--bricks-color-text-muted,#475569)] [&_a]:text-[var(--bricks-color-accent,#2563eb)] [&_a]:underline">
+      <slot />
+    </div>
+
+    {showFooter && (
+      <footer class="flex flex-wrap items-center justify-end gap-3 border-t border-[var(--bricks-color-border,#e2e8f0)] px-6 py-4">
+        <slot name="footer">
+          <button
+            type="button"
+            data-modal-close
+            class="rounded-md border border-[var(--bricks-color-border,#e2e8f0)] px-4 py-2 text-sm font-semibold text-[var(--bricks-color-text,#0f172a)] transition hover:bg-black/5 focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            {cancelLabel}
+          </button>
+          <button
+            type="button"
+            data-modal-confirm
+            class:list={[
+              'rounded-md px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2',
+              confirmClass,
+            ]}
+          >
+            {confirmLabel}
+          </button>
+        </slot>
+      </footer>
+    )}
+  </form>
+</dialog>
+
+<style>
+  .modal-dialog {
+    margin: auto;
+  }
+  .modal-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.55);
+  }
+  .modal-anchor-center { margin: auto; }
+  .modal-anchor-right {
+    margin: 0 0 0 auto;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .modal-anchor-left {
+    margin: 0 auto 0 0;
+    height: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  .modal-anchor-right .flex,
+  .modal-anchor-left .flex { max-height: 100vh; }
+</style>
+
+<script>
+  function setupModals() {
+    document
+      .querySelectorAll<HTMLDialogElement>('dialog[data-modal]')
+      .forEach((dialog) => {
+        if (dialog.dataset.initialized === 'true') return;
+        dialog.dataset.initialized = 'true';
+
+        const closeOnOverlay = dialog.dataset.closeOverlay === 'true';
+        const closeOnEscape = dialog.dataset.closeEscape === 'true';
+
+        const open = () => {
+          if (!dialog.open) dialog.showModal();
+        };
+        const close = () => {
+          if (dialog.open) dialog.close();
+        };
+
+        // Déclencheurs externes : [data-modal-open="id"] ou href="#id".
+        document
+          .querySelectorAll<HTMLElement>(
+            `[data-modal-open="${dialog.id}"], a[href="#${dialog.id}"]`
+          )
+          .forEach((trigger) => {
+            if (trigger.dataset.modalBound === 'true') return;
+            trigger.dataset.modalBound = 'true';
+            trigger.addEventListener('click', (e) => {
+              e.preventDefault();
+              open();
+            });
+          });
+
+        // Boutons de fermeture internes.
+        dialog
+          .querySelectorAll<HTMLElement>('[data-modal-close]')
+          .forEach((btn) => btn.addEventListener('click', close));
+
+        // Bouton de confirmation : émet l'événement puis ferme.
+        const confirmBtn = dialog.querySelector<HTMLElement>('[data-modal-confirm]');
+        if (confirmBtn) {
+          confirmBtn.addEventListener('click', () => {
+            dialog.dispatchEvent(
+              new CustomEvent('modal:confirm', { bubbles: true })
+            );
+            close();
+          });
+        }
+
+        // Escape natif.
+        dialog.addEventListener('cancel', (e) => {
+          if (!closeOnEscape) e.preventDefault();
+        });
+
+        // Clic sur le backdrop = clic dont la cible est le <dialog> lui-même.
+        if (closeOnOverlay) {
+          dialog.addEventListener('click', (e) => {
+            if (e.target === dialog) close();
+          });
+        }
+
+        if (dialog.dataset.openInitial === 'true') open();
+      });
+  }
+
+  setupModals();
+  document.addEventListener('astro:page-load', setupModals);
+</script>

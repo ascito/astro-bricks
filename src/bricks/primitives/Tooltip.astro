@@ -1,0 +1,208 @@
+---
+/**
+ * tooltip — Info-bulle au survol.
+ *
+ * Schema catalog : {
+ *   content?, position?, trigger?, variant?, size?, arrow?, delay?,
+ *   maxWidth?, className?, id?
+ * }
+ *
+ * Fonctionnement : CSS pur pour `trigger=hover` et `trigger=focus` (le wrapper est un
+ * `<span tabindex>` et la bulle apparaît via `:hover`/`:focus-within` + delay en
+ * `transition-delay`). `trigger=click` ajoute un script minimal qui bascule
+ * `data-open` au clic et ferme à l'Escape / clic extérieur. Le déclencheur est le
+ * contenu passé en slot. La bulle porte `role="tooltip"` et `aria-describedby` la
+ * relie au slot.
+ *
+ * Théming : variant dark = fond `--bricks-color-text` ; light = `--bricks-color-surface`
+ * + bordure ; primary = `--bricks-color-accent`. Fallbacks fournis.
+ */
+interface Props {
+  /** Contenu du tooltip (HTML supporté). */
+  content?: string;
+  /** Position. Défaut : "top". */
+  position?: 'top' | 'bottom' | 'left' | 'right';
+  /** Déclencheur. Défaut : "hover". */
+  trigger?: 'hover' | 'click' | 'focus';
+  /** Style. Défaut : "dark". */
+  variant?: 'dark' | 'light' | 'primary';
+  /** Taille. Défaut : "md". */
+  size?: 'sm' | 'md' | 'lg';
+  /** Afficher la flèche. Défaut : true. */
+  arrow?: boolean;
+  /** Délai d'apparition en ms. Défaut : 200. */
+  delay?: number;
+  /** Largeur max. Défaut : "250px". */
+  maxWidth?: string;
+  /** Override des classes du wrapper racine. */
+  className?: string;
+  /** ID HTML (du tooltip, pour aria-describedby). */
+  id?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  content = '',
+  position = 'top',
+  trigger = 'hover',
+  variant = 'dark',
+  size = 'md',
+  arrow = true,
+  delay = 200,
+  maxWidth = '250px',
+  className = '',
+  id,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const tipId = id ?? `tip-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const variantClass = {
+  dark: 'bg-[var(--bricks-color-text,#0f172a)] text-white',
+  light:
+    'bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text,#0f172a)] border border-[var(--bricks-color-border,#e2e8f0)] shadow-md',
+  primary: 'bg-[var(--bricks-color-accent,#2563eb)] text-white',
+}[variant];
+
+const sizeClass = {
+  sm: 'px-2 py-1 text-xs',
+  md: 'px-2.5 py-1.5 text-sm',
+  lg: 'px-3 py-2 text-base',
+}[size];
+---
+
+<span
+  class:list={['tooltip-wrap relative inline-flex', className]}
+  data-trigger={trigger}
+  data-position={position}
+  tabindex={trigger === 'focus' ? 0 : undefined}
+  {...rest}
+>
+  <slot />
+  <span
+    id={tipId}
+    role="tooltip"
+    class:list={['tooltip-bubble', variantClass, sizeClass]}
+    style={`max-width:${maxWidth};transition-delay:${delay}ms`}
+    set:html={content}
+  ></span>
+  {arrow && (
+    <span class="tooltip-arrow" data-variant={variant} aria-hidden="true"></span>
+  )}
+</span>
+
+<style define:vars={{ tipdelay: `${delay}ms` }}>
+  .tooltip-wrap { vertical-align: middle; }
+
+  .tooltip-bubble {
+    position: absolute;
+    z-index: 50;
+    width: max-content;
+    border-radius: 0.375rem;
+    line-height: 1.3;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    transition-delay: 0ms;
+  }
+  .tooltip-arrow {
+    position: absolute;
+    z-index: 50;
+    width: 0;
+    height: 0;
+    border: 5px solid transparent;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+  }
+
+  /* Positions */
+  .tooltip-wrap[data-position='top'] .tooltip-bubble {
+    bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: 8px;
+  }
+  .tooltip-wrap[data-position='top'] .tooltip-arrow {
+    bottom: 100%; left: 50%; transform: translateX(-50%); margin-bottom: -2px;
+    border-top-color: var(--arrow-color);
+  }
+  .tooltip-wrap[data-position='bottom'] .tooltip-bubble {
+    top: 100%; left: 50%; transform: translateX(-50%); margin-top: 8px;
+  }
+  .tooltip-wrap[data-position='bottom'] .tooltip-arrow {
+    top: 100%; left: 50%; transform: translateX(-50%); margin-top: -2px;
+    border-bottom-color: var(--arrow-color);
+  }
+  .tooltip-wrap[data-position='left'] .tooltip-bubble {
+    right: 100%; top: 50%; transform: translateY(-50%); margin-right: 8px;
+  }
+  .tooltip-wrap[data-position='left'] .tooltip-arrow {
+    right: 100%; top: 50%; transform: translateY(-50%); margin-right: -2px;
+    border-left-color: var(--arrow-color);
+  }
+  .tooltip-wrap[data-position='right'] .tooltip-bubble {
+    left: 100%; top: 50%; transform: translateY(-50%); margin-left: 8px;
+  }
+  .tooltip-wrap[data-position='right'] .tooltip-arrow {
+    left: 100%; top: 50%; transform: translateY(-50%); margin-left: -2px;
+    border-right-color: var(--arrow-color);
+  }
+
+  .tooltip-arrow[data-variant='dark'] { --arrow-color: var(--bricks-color-text, #0f172a); }
+  .tooltip-arrow[data-variant='light'] { --arrow-color: var(--bricks-color-border, #e2e8f0); }
+  .tooltip-arrow[data-variant='primary'] { --arrow-color: var(--bricks-color-accent, #2563eb); }
+
+  /* Reveal : hover / focus (zéro JS) avec delay */
+  .tooltip-wrap[data-trigger='hover']:hover .tooltip-bubble,
+  .tooltip-wrap[data-trigger='hover']:hover .tooltip-arrow,
+  .tooltip-wrap[data-trigger='focus']:focus-within .tooltip-bubble,
+  .tooltip-wrap[data-trigger='focus']:focus-within .tooltip-arrow,
+  .tooltip-wrap[data-open='true'] .tooltip-bubble,
+  .tooltip-wrap[data-open='true'] .tooltip-arrow {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tooltip-bubble { transition-delay: 0ms !important; }
+  }
+</style>
+
+<script>
+  function setupTooltips() {
+    document
+      .querySelectorAll<HTMLElement>('.tooltip-wrap[data-trigger="click"]')
+      .forEach((wrap) => {
+        if (wrap.dataset.initialized === 'true') return;
+        wrap.dataset.initialized = 'true';
+
+        wrap.style.cursor = 'pointer';
+        wrap.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const open = wrap.dataset.open === 'true';
+          wrap.dataset.open = open ? 'false' : 'true';
+        });
+      });
+
+    if (!(document as any).__tooltipGlobalBound) {
+      (document as any).__tooltipGlobalBound = true;
+      document.addEventListener('click', () => {
+        document
+          .querySelectorAll<HTMLElement>('.tooltip-wrap[data-open="true"]')
+          .forEach((w) => (w.dataset.open = 'false'));
+      });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          document
+            .querySelectorAll<HTMLElement>('.tooltip-wrap[data-open="true"]')
+            .forEach((w) => (w.dataset.open = 'false'));
+        }
+      });
+    }
+  }
+
+  setupTooltips();
+  document.addEventListener('astro:page-load', setupTooltips);
+</script>

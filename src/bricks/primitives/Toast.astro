@@ -1,0 +1,168 @@
+---
+/**
+ * toast — Notification temporaire.
+ *
+ * Schema catalog : {
+ *   message, type?, position?, duration?, dismissible?, icon?, className?
+ * }
+ *
+ * Fonctionnement : le serveur rend la notification dans un conteneur `fixed` ancré
+ * selon `position` (avec `aria-live="polite"` / `assertive` pour error). Au chargement,
+ * un script anime l'entrée puis, si `duration > 0`, déclenche la sortie + retrait du
+ * DOM après le délai. `dismissible` ajoute un bouton de fermeture immédiate. Plusieurs
+ * toasts de même position s'empilent dans le même conteneur partagé.
+ *
+ * Théming : couleurs sémantiques fixes par `type` ; le cadre/surface utilise
+ * `--bricks-color-surface` et `--bricks-color-border` avec fallbacks.
+ */
+interface Props {
+  /** Message à afficher. */
+  message: string;
+  /** Type. Défaut : "info". */
+  type?: 'success' | 'error' | 'warning' | 'info';
+  /** Position à l'écran. Défaut : "top-right". */
+  position?:
+    | 'top-right'
+    | 'top-left'
+    | 'bottom-right'
+    | 'bottom-left'
+    | 'top-center'
+    | 'bottom-center';
+  /** Durée en ms (0 = pas d'auto-dismiss). Défaut : 5000. */
+  duration?: number;
+  /** Afficher le bouton de fermeture. Défaut : true. */
+  dismissible?: boolean;
+  /** Afficher l'icône du type. Défaut : true. */
+  icon?: boolean;
+  /** Override des classes du toast. */
+  className?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  message,
+  type = 'info',
+  position = 'top-right',
+  duration = 5000,
+  dismissible = true,
+  icon = true,
+  className = '',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const containerId = `toast-region-${position}`;
+
+const posClass = {
+  'top-right': 'top-4 right-4 items-end',
+  'top-left': 'top-4 left-4 items-start',
+  'bottom-right': 'bottom-4 right-4 items-end',
+  'bottom-left': 'bottom-4 left-4 items-start',
+  'top-center': 'top-4 left-1/2 -translate-x-1/2 items-center',
+  'bottom-center': 'bottom-4 left-1/2 -translate-x-1/2 items-center',
+}[position];
+
+const typeClass = {
+  success: 'border-l-green-500 text-green-900',
+  error: 'border-l-red-500 text-red-900',
+  warning: 'border-l-amber-500 text-amber-900',
+  info: 'border-l-blue-500 text-blue-900',
+}[type];
+
+const iconChar = { success: '✓', error: '✕', warning: '⚠', info: 'ℹ' }[type];
+const live = type === 'error' ? 'assertive' : 'polite';
+---
+
+<div
+  id={containerId}
+  class:list={['pointer-events-none fixed z-[60] flex flex-col gap-2', posClass]}
+  aria-live={live}
+  aria-atomic="false"
+>
+  <div
+    role="status"
+    data-toast
+    data-duration={duration}
+    data-position={position}
+    class:list={[
+      'toast-item pointer-events-auto flex max-w-sm items-start gap-3 rounded-md border-l-4 p-4 shadow-lg',
+      'bg-[var(--bricks-color-surface,#ffffff)] border border-[var(--bricks-color-border,#e2e8f0)]',
+      typeClass,
+      className,
+    ]}
+    {...rest}
+  >
+    {icon && (
+      <span aria-hidden="true" class="text-lg font-bold leading-tight">{iconChar}</span>
+    )}
+    <p class="flex-1 text-sm leading-snug" set:html={message}></p>
+    {dismissible && (
+      <button
+        type="button"
+        data-toast-close
+        aria-label="Fermer la notification"
+        class="self-start rounded text-current opacity-60 transition hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        ×
+      </button>
+    )}
+  </div>
+</div>
+
+<style>
+  .toast-item {
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .toast-item[data-show='true'] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .toast-item[data-hide='true'] {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .toast-item { transition: opacity 0.1s ease; transform: none; }
+    .toast-item[data-show='true'],
+    .toast-item[data-hide='true'] { transform: none; }
+  }
+</style>
+
+<script>
+  function setupToasts() {
+    document
+      .querySelectorAll<HTMLElement>('[data-toast]')
+      .forEach((toast) => {
+        if (toast.dataset.initialized === 'true') return;
+        toast.dataset.initialized = 'true';
+
+        const duration = Number(toast.dataset.duration ?? 5000);
+
+        const remove = () => {
+          toast.dataset.hide = 'true';
+          toast.dataset.show = 'false';
+          const done = () => toast.remove();
+          toast.addEventListener('transitionend', done, { once: true });
+          // Filet de sécurité si pas de transitionend.
+          window.setTimeout(done, 400);
+        };
+
+        // Entrée au frame suivant pour déclencher la transition.
+        requestAnimationFrame(() => (toast.dataset.show = 'true'));
+
+        const closeBtn = toast.querySelector<HTMLElement>('[data-toast-close]');
+        if (closeBtn) closeBtn.addEventListener('click', remove);
+
+        if (duration > 0) {
+          window.setTimeout(remove, duration);
+        }
+      });
+  }
+
+  setupToasts();
+  document.addEventListener('astro:page-load', setupToasts);
+</script>

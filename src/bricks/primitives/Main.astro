@@ -1,0 +1,43 @@
+---
+/**
+ * main — Conteneur principal de page (landmark <main>).
+ * Schema catalog : { id?, role?, minHeight?, padding? }
+ * Slot : children (wrapper de layout, pas de marge imposée).
+ */
+interface Props {
+  /** ID HTML (cible des skip-links). Défaut : "main-content". */
+  id?: string;
+  /** Rôle ARIA. Défaut : "main". */
+  role?: string;
+  /** Hauteur minimale CSS (ex: "calc(100vh - 200px)"). */
+  minHeight?: string;
+  /** Padding CSS interne. */
+  padding?: string;
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  id = 'main-content',
+  role = 'main',
+  minHeight,
+  padding,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const style = [
+  minHeight ? `min-height:${minHeight}` : null,
+  padding ? `padding:${padding}` : null,
+]
+  .filter(Boolean)
+  .join(';');
+---
+
+<main id={id} role={role} class={customClass} style={style || undefined} {...rest}>
+  <slot name="children" />
+  <slot />
+</main>

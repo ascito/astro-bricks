@@ -1,0 +1,139 @@
+---
+/**
+ * grid — Grille CSS responsive.
+ * Schema catalog : {
+ *   columns?, columnsSm?, columnsMd?, columnsLg?, columnsXl?,
+ *   gap?, rowGap?, minChildWidth?, className?, id?
+ * }
+ * Slot : children (wrapper de layout, pas de marge imposée).
+ *
+ * Si `minChildWidth` est fourni, la grille passe en mode auto-fit
+ * (les colonnes explicites sont ignorées).
+ */
+interface Props {
+  /** Nombre de colonnes (mobile first). Défaut : 1. */
+  columns?: number;
+  /** Colonnes à partir de 640px. */
+  columnsSm?: number;
+  /** Colonnes à partir de 768px. */
+  columnsMd?: number;
+  /** Colonnes à partir de 1024px. */
+  columnsLg?: number;
+  /** Colonnes à partir de 1280px. */
+  columnsXl?: number;
+  /** Espacement. Défaut : "md". */
+  gap?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  /** Espacement vertical (défaut : même que gap). */
+  rowGap?: 'none' | 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Largeur minimum des enfants pour auto-fit (ex: "200px"). */
+  minChildWidth?: string;
+  className?: string;
+  id?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  columns = 1,
+  columnsSm,
+  columnsMd,
+  columnsLg,
+  columnsXl,
+  gap = 'md',
+  rowGap,
+  minChildWidth,
+  className = '',
+  id,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const gapScale: Record<string, string> = {
+  none: '0',
+  xs: '0.25rem',
+  sm: '0.5rem',
+  md: '1rem',
+  lg: '1.5rem',
+  xl: '2rem',
+  '2xl': '3rem',
+};
+
+const columnGap = gapScale[gap] ?? gapScale.md;
+const verticalGap = rowGap ? (gapScale[rowGap] ?? columnGap) : columnGap;
+
+const colsFor = (n?: number) =>
+  n ? `repeat(${n}, minmax(0, 1fr))` : null;
+
+// La base + chaque breakpoint passent par des CSS variables (--grid-cols-*)
+// consommées par le <style scoped>, afin que les media queries puissent
+// surcharger la base (un grid-template-columns inline gagnerait sur le scoped).
+const baseTemplate = minChildWidth
+  ? `repeat(auto-fit, minmax(${minChildWidth}, 1fr))`
+  : (colsFor(columns) as string);
+
+const responsiveVars = !minChildWidth
+  ? ([
+      ['--grid-cols-sm', colsFor(columnsSm)],
+      ['--grid-cols-md', colsFor(columnsMd)],
+      ['--grid-cols-lg', colsFor(columnsLg)],
+      ['--grid-cols-xl', colsFor(columnsXl)],
+    ].filter(([, v]) => v) as [string, string][])
+  : [];
+
+const fullStyle = [
+  `display:grid`,
+  `column-gap:${columnGap}`,
+  `row-gap:${verticalGap}`,
+  `--grid-cols-base:${baseTemplate}`,
+  ...responsiveVars.map(([k, v]) => `${k}:${v}`),
+].join(';');
+---
+
+<div
+  id={id}
+  class:list={['bricks-grid', className]}
+  style={fullStyle}
+  {...rest}
+>
+  <slot name="children" />
+  <slot />
+</div>
+
+<style>
+  .bricks-grid {
+    grid-template-columns: var(--grid-cols-base);
+  }
+  @media (min-width: 640px) {
+    .bricks-grid {
+      grid-template-columns: var(--grid-cols-sm, var(--grid-cols-base));
+    }
+  }
+  @media (min-width: 768px) {
+    .bricks-grid {
+      grid-template-columns: var(
+        --grid-cols-md,
+        var(--grid-cols-sm, var(--grid-cols-base))
+      );
+    }
+  }
+  @media (min-width: 1024px) {
+    .bricks-grid {
+      grid-template-columns: var(
+        --grid-cols-lg,
+        var(--grid-cols-md, var(--grid-cols-sm, var(--grid-cols-base)))
+      );
+    }
+  }
+  @media (min-width: 1280px) {
+    .bricks-grid {
+      grid-template-columns: var(
+        --grid-cols-xl,
+        var(
+          --grid-cols-lg,
+          var(--grid-cols-md, var(--grid-cols-sm, var(--grid-cols-base)))
+        )
+      );
+    }
+  }
+</style>

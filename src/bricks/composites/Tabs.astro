@@ -1,0 +1,214 @@
+---
+/**
+ * tabs — Onglets de navigation (boutons + panneaux).
+ *
+ * Schema catalog : {
+ *   tabs (REQUIS) [{id?, label, content?, icon?, disabled?}],
+ *   defaultTab?, variant?, size?, fullWidth?, centered?, className?
+ * }
+ *
+ * Fonctionnement : tous les panneaux sont rendus côté serveur (un seul visible).
+ * Un petit script client gère le switch au clic + navigation clavier (flèches,
+ * Home/End) selon le pattern ARIA tablist/tab/tabpanel. `content` est injecté en
+ * HTML ; passe des enfants nommés via slot `panel-<id>` pour du contenu riche.
+ *
+ * Théming : consomme les variables `--bricks-color-*` (accent pour l'onglet actif,
+ * border/text-muted pour les inactifs) avec fallbacks.
+ */
+interface TabItem {
+  /** Identifiant stable (sinon dérivé de l'index). */
+  id?: string;
+  /** Libellé de l'onglet. */
+  label: string;
+  /** Contenu HTML du panneau. */
+  content?: string;
+  /** Emoji/glyphe optionnel. */
+  icon?: string;
+  /** Onglet désactivé. */
+  disabled?: boolean;
+}
+
+interface Props {
+  /** Liste des onglets. */
+  tabs: TabItem[];
+  /** ID de l'onglet actif par défaut (premier sinon). */
+  defaultTab?: string;
+  /** Style visuel. Défaut : 'default'. */
+  variant?: 'default' | 'pills' | 'underline' | 'boxed';
+  /** Taille. Défaut : 'md'. */
+  size?: 'sm' | 'md' | 'lg';
+  /** Onglets en pleine largeur. Défaut : false. */
+  fullWidth?: boolean;
+  /** Centrer les onglets. Défaut : false. */
+  centered?: boolean;
+  /** Label accessible de la liste d'onglets. Défaut : 'Onglets'. */
+  ariaLabel?: string;
+  /** Classes additionnelles. */
+  className?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  tabs = [],
+  defaultTab,
+  variant = 'default',
+  size = 'md',
+  fullWidth = false,
+  centered = false,
+  ariaLabel = 'Onglets',
+  className = '',
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const base = `tabs-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const normTabs = tabs.map((t, i) => ({
+  ...t,
+  id: t.id ?? `${base}-tab-${i}`,
+}));
+
+const activeId =
+  (defaultTab && normTabs.find((t) => t.id === defaultTab)?.id) ||
+  normTabs.find((t) => !t.disabled)?.id ||
+  normTabs[0]?.id;
+
+const SIZE: Record<string, string> = {
+  sm: 'text-sm px-3 py-1.5',
+  md: 'text-sm px-4 py-2',
+  lg: 'text-base px-5 py-2.5',
+};
+
+// Classe d'un onglet selon variant + état. Les classes "actives" sont appliquées
+// au runtime par le script ; ici on rend l'état initial (data-active).
+const TABLIST: Record<string, string> = {
+  default: 'border-b border-[var(--bricks-color-border,#e2e8f0)]',
+  pills: 'gap-2',
+  underline: 'border-b border-[var(--bricks-color-border,#e2e8f0)] gap-4',
+  boxed: 'gap-1 border-b border-[var(--bricks-color-border,#e2e8f0)]',
+};
+---
+<div class:list={[`${variant}`, className]} data-tabs data-variant={variant} {...rest}>
+  <div
+    role="tablist"
+    aria-label={ariaLabel}
+    class:list={[
+      'flex flex-wrap',
+      TABLIST[variant],
+      centered ? 'justify-center' : '',
+      fullWidth ? '[&>button]:flex-1' : '',
+    ]}
+  >
+    {normTabs.map((tab) => {
+      const isActive = tab.id === activeId;
+      return (
+        <button
+          type="button"
+          role="tab"
+          id={`${tab.id}-tab`}
+          aria-controls={`${tab.id}-panel`}
+          aria-selected={isActive ? 'true' : 'false'}
+          aria-disabled={tab.disabled ? 'true' : undefined}
+          tabindex={isActive ? 0 : -1}
+          disabled={tab.disabled}
+          data-tab-btn={tab.id}
+          data-active={isActive ? 'true' : 'false'}
+          class:list={[
+            'inline-flex items-center gap-1.5 font-semibold tracking-tight transition-colors',
+            SIZE[size],
+            tab.disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+            variant === 'pills' ? 'rounded-full' : '',
+            variant === 'boxed' ? 'rounded-t-lg' : '',
+            'data-[active=false]:text-[var(--bricks-color-text-muted,#475569)] data-[active=false]:hover:text-[var(--bricks-color-text,#0f172a)]',
+            'data-[active=true]:text-[var(--bricks-color-accent,#2563eb)]',
+            variant === 'pills'
+              ? 'data-[active=true]:bg-[var(--bricks-color-accent,#2563eb)] data-[active=true]:text-white'
+              : '',
+            variant === 'boxed'
+              ? 'data-[active=true]:bg-[var(--bricks-color-surface,#ffffff)] data-[active=true]:border data-[active=true]:border-b-0 data-[active=true]:border-[var(--bricks-color-border,#e2e8f0)] -mb-px'
+              : '',
+            variant === 'default' || variant === 'underline'
+              ? 'border-b-2 border-transparent data-[active=true]:border-[var(--bricks-color-accent,#2563eb)] -mb-px'
+              : '',
+          ]}
+        >
+          {tab.icon && <span aria-hidden="true">{tab.icon}</span>}
+          {tab.label}
+        </button>
+      );
+    })}
+  </div>
+
+  <div class="pt-5">
+    {normTabs.map((tab) => {
+      const isActive = tab.id === activeId;
+      return (
+        <div
+          role="tabpanel"
+          id={`${tab.id}-panel`}
+          aria-labelledby={`${tab.id}-tab`}
+          tabindex="0"
+          data-tab-panel={tab.id}
+          hidden={!isActive}
+          class="text-[var(--bricks-color-text,#0f172a)] [&_a]:text-[var(--bricks-color-accent,#2563eb)] [&_a]:underline"
+        >
+          {tab.content ? <Fragment set:html={tab.content} /> : <slot name={`panel-${tab.id}`} />}
+        </div>
+      );
+    })}
+  </div>
+</div>
+
+<script>
+  function setupTabs(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const buttons = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-tab-btn]'));
+    const panels = Array.from(root.querySelectorAll<HTMLElement>('[data-tab-panel]'));
+    if (buttons.length === 0) return;
+
+    function activate(id: string, focus = false) {
+      buttons.forEach((btn) => {
+        const active = btn.dataset.tabBtn === id;
+        btn.dataset.active = String(active);
+        btn.setAttribute('aria-selected', String(active));
+        btn.tabIndex = active ? 0 : -1;
+        if (active && focus) btn.focus();
+      });
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.tabPanel !== id;
+      });
+    }
+
+    buttons.forEach((btn, index) => {
+      btn.addEventListener('click', () => {
+        if (btn.disabled) return;
+        activate(btn.dataset.tabBtn!);
+      });
+
+      btn.addEventListener('keydown', (e) => {
+        const enabled = buttons.filter((b) => !b.disabled);
+        const pos = enabled.indexOf(btn);
+        let next: HTMLButtonElement | undefined;
+        if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = enabled[(pos + 1) % enabled.length];
+        else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = enabled[(pos - 1 + enabled.length) % enabled.length];
+        else if (e.key === 'Home') next = enabled[0];
+        else if (e.key === 'End') next = enabled[enabled.length - 1];
+        if (next) {
+          e.preventDefault();
+          activate(next.dataset.tabBtn!, true);
+        }
+      });
+    });
+  }
+
+  function initAllTabs() {
+    document.querySelectorAll<HTMLElement>('[data-tabs]').forEach((el) => setupTabs(el));
+  }
+
+  initAllTabs();
+  document.addEventListener('astro:page-load', initAllTabs);
+</script>

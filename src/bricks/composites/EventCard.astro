@@ -1,0 +1,203 @@
+---
+/**
+ * event-card — Carte d'événement avec date et lieu.
+ *
+ * Schema catalog : {
+ *   title (REQUIS), date (REQUIS), endDate?, time?, location?, locationType?,
+ *   price?, originalPrice?, spots?, maxSpots?, tags?, status?, href?,
+ *   variant?, showDateBadge?, className?, data?
+ * }
+ *
+ * Théming : consomme les variables `--bricks-color-*` (surface/border pour le cadre,
+ * accent pour le badge date et le statut, text/text-muted pour le corps) avec fallbacks.
+ */
+interface Props {
+  /** Titre de l'événement. */
+  title: string;
+  /** Date au format ISO (2025-02-15) ou texte libre. */
+  date: string;
+  /** Date de fin (événements multi-jours). */
+  endDate?: string;
+  /** Heure (ex: "09:00 - 17:00"). */
+  time?: string;
+  /** Lieu de l'événement. */
+  location?: string;
+  /** Type de lieu. Défaut : 'physical'. */
+  locationType?: 'physical' | 'online' | 'hybrid';
+  /** Prix en euros. */
+  price?: number;
+  /** Prix barré (promotion). */
+  originalPrice?: number;
+  /** Nombre de places disponibles. */
+  spots?: number;
+  /** Nombre total de places. */
+  maxSpots?: number;
+  /** Tags / catégories. */
+  tags?: string[];
+  /** Statut. Défaut : 'available'. */
+  status?: 'available' | 'few-spots' | 'full' | 'cancelled';
+  /** Lien vers la page détail. */
+  href?: string;
+  /** Style. Défaut : 'default'. */
+  variant?: 'default' | 'compact' | 'horizontal';
+  /** Afficher le badge date à gauche. Défaut : true. */
+  showDateBadge?: boolean;
+  /** Classes additionnelles. */
+  className?: string;
+  /** Attributs data-* personnalisés pour le filtrage. */
+  data?: Record<string, string | number | boolean>;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  title,
+  date,
+  endDate,
+  time,
+  location,
+  locationType = 'physical',
+  price,
+  originalPrice,
+  spots,
+  maxSpots,
+  tags = [],
+  status = 'available',
+  href,
+  variant = 'default',
+  showDateBadge = true,
+  className = '',
+  data = {},
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const horizontal = variant === 'horizontal';
+
+// Parse de la date pour le badge (jour + mois court FR). Fallback : texte brut.
+function parseDateBadge(value: string): { day: string; month: string } | null {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return {
+    day: d.toLocaleDateString('fr-FR', { day: '2-digit' }),
+    month: d.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''),
+  };
+}
+const badge = parseDateBadge(date);
+
+const STATUS_MAP: Record<string, { label: string; cls: string }> = {
+  available: { label: 'Places disponibles', cls: 'bg-emerald-100 text-emerald-800' },
+  'few-spots': { label: 'Dernières places', cls: 'bg-amber-100 text-amber-800' },
+  full: { label: 'Complet', cls: 'bg-slate-200 text-slate-700' },
+  cancelled: { label: 'Annulé', cls: 'bg-red-100 text-red-800' },
+};
+const statusInfo = STATUS_MAP[status] ?? STATUS_MAP.available;
+
+const LOCATION_LABEL: Record<string, string> = {
+  physical: 'Présentiel',
+  online: 'En ligne',
+  hybrid: 'Hybride',
+};
+
+const priceLabel =
+  price === 0 ? 'Gratuit' : price != null ? `${price} €` : null;
+
+const dataAttrs = Object.fromEntries(
+  Object.entries(data).map(([k, v]) => [`data-${k}`, String(v)])
+);
+
+const RootTag = href ? 'a' : 'article';
+---
+<RootTag
+  data-brick="event-card"
+  href={href}
+  class:list={[
+    'mb-12 block rounded-2xl border overflow-hidden transition-shadow hover:shadow-lg group',
+    'border-[var(--bricks-color-border,#e2e8f0)]',
+    'bg-[var(--bricks-color-surface,#ffffff)]',
+    horizontal ? 'flex items-stretch' : '',
+    status === 'cancelled' ? 'opacity-75' : '',
+    className,
+  ]}
+  {...dataAttrs}
+  {...rest}
+>
+  {showDateBadge && badge && (
+    <div
+      aria-hidden="true"
+      class:list={[
+        'flex flex-col items-center justify-center px-4 py-3 text-center text-white shrink-0',
+        'bg-[var(--bricks-color-accent,#2563eb)]',
+        horizontal ? 'min-w-[5rem]' : 'absolute',
+      ]}
+      style={horizontal ? undefined : 'position:relative'}
+    >
+      <span class="font-sans font-extrabold text-2xl leading-none">{badge.day}</span>
+      <span class="text-xs font-semibold uppercase tracking-wider">{badge.month}</span>
+    </div>
+  )}
+
+  <div class:list={['p-5', horizontal ? 'flex-1' : '']}>
+    {tags.length > 0 && (
+      <div class="mb-2 flex flex-wrap gap-1.5">
+        {tags.map((tag) => (
+          <span class="rounded-full bg-[var(--bricks-color-muted,#f1f5f9)] px-2.5 py-0.5 text-xs font-semibold text-[var(--bricks-color-text-muted,#475569)]">
+            {tag}
+          </span>
+        ))}
+      </div>
+    )}
+
+    <h3 class="font-sans font-extrabold tracking-tight text-lg leading-tight text-[var(--bricks-color-text,#0f172a)] group-hover:text-[var(--bricks-color-accent,#2563eb)]">
+      {title}
+    </h3>
+
+    <dl class="mt-3 space-y-1 text-sm text-[var(--bricks-color-text-muted,#475569)]">
+      <div class="flex items-center gap-2">
+        <span aria-hidden="true">📅</span>
+        <span>
+          {badge
+            ? new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+            : date}
+          {endDate && ` → ${parseDateBadge(endDate) ? new Date(endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : endDate}`}
+        </span>
+      </div>
+      {time && (
+        <div class="flex items-center gap-2">
+          <span aria-hidden="true">🕐</span><span>{time}</span>
+        </div>
+      )}
+      {location && (
+        <div class="flex items-center gap-2">
+          <span aria-hidden="true">📍</span>
+          <span>{location} <span class="text-xs">({LOCATION_LABEL[locationType] ?? locationType})</span></span>
+        </div>
+      )}
+    </dl>
+
+    <div class="mt-4 flex items-center justify-between gap-3">
+      <div class="flex items-baseline gap-2">
+        {priceLabel && (
+          <span class="font-sans font-extrabold text-xl text-[var(--bricks-color-text,#0f172a)]">
+            {priceLabel}
+          </span>
+        )}
+        {originalPrice != null && (
+          <span class="text-sm text-[var(--bricks-color-text-faint,#94a3b8)] line-through">
+            {originalPrice} €
+          </span>
+        )}
+      </div>
+      <span class:list={['rounded-full px-2.5 py-1 text-xs font-semibold', statusInfo.cls]}>
+        {statusInfo.label}
+      </span>
+    </div>
+
+    {spots != null && maxSpots != null && status !== 'cancelled' && (
+      <p class="mt-2 text-xs text-[var(--bricks-color-text-faint,#94a3b8)]">
+        {spots} / {maxSpots} places restantes
+      </p>
+    )}
+  </div>
+</RootTag>

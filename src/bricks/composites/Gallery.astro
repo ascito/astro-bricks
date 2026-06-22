@@ -1,0 +1,264 @@
+---
+/**
+ * gallery — Galerie d'images en grille avec lightbox optionnel.
+ *
+ * Schema catalog : {
+ *   images (REQUIS), columns?, gap?, aspectRatio?, variant?, rounded?,
+ *   lightbox?, showCaptions?, hoverEffect?, maxImages?
+ * }
+ *
+ * Fonctionnement : grille CSS responsive (1 col mobile → `columns` en desktop).
+ * Variant `masonry` via colonnes CSS, `featured` met la 1re image en grand.
+ * Si `lightbox`, un <dialog> natif s'ouvre au clic (script client avec garde
+ * dataset.initialized, ré-init astro:page-load) avec navigation prev/next + Escape.
+ *
+ * Images : tableau d'objets { src, alt?, caption?, thumb? }.
+ *
+ * Théming : surface/border via `--bricks-color-*` ; lightbox sur fond sombre.
+ */
+interface GalleryImage {
+  src: string;
+  alt?: string;
+  caption?: string;
+  thumb?: string;
+}
+
+interface Props {
+  /** Liste des images. */
+  images: GalleryImage[];
+  /** Colonnes en desktop. Défaut : 3. */
+  columns?: number;
+  /** Espacement entre images. Défaut : "md". */
+  gap?: 'none' | 'xs' | 'sm' | 'md' | 'lg';
+  /** Ratio des images. Défaut : "1/1". */
+  aspectRatio?: '1/1' | '4/3' | '16/9' | '3/4' | 'auto';
+  /** Disposition. Défaut : "grid". */
+  variant?: 'grid' | 'masonry' | 'featured';
+  /** Coins arrondis. Défaut : "md". */
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Activer le lightbox au clic. Défaut : true. */
+  lightbox?: boolean;
+  /** Afficher les légendes sous les images. Défaut : false. */
+  showCaptions?: boolean;
+  /** Effet au survol. Défaut : "zoom". */
+  hoverEffect?: 'none' | 'zoom' | 'fade' | 'overlay';
+  /** Nombre max d'images affichées. */
+  maxImages?: number;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  images = [],
+  columns = 3,
+  gap = 'md',
+  aspectRatio = '1/1',
+  variant = 'grid',
+  rounded = 'md',
+  lightbox = true,
+  showCaptions = false,
+  hoverEffect = 'zoom',
+  maxImages,
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const galleryId = `gallery-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+const shown = maxImages ? images.slice(0, maxImages) : images;
+
+const gapClass = { none: 'gap-0', xs: 'gap-1', sm: 'gap-2', md: 'gap-4', lg: 'gap-6' }[gap];
+const roundedClass = {
+  none: 'rounded-none', sm: 'rounded-sm', md: 'rounded-md', lg: 'rounded-lg', xl: 'rounded-xl',
+}[rounded];
+
+const colsClass = {
+  1: 'grid-cols-1',
+  2: 'grid-cols-1 sm:grid-cols-2',
+  3: 'grid-cols-2 md:grid-cols-3',
+  4: 'grid-cols-2 md:grid-cols-4',
+  5: 'grid-cols-2 sm:grid-cols-3 md:grid-cols-5',
+  6: 'grid-cols-3 md:grid-cols-6',
+}[Math.min(6, Math.max(1, columns))] ?? 'grid-cols-2 md:grid-cols-3';
+
+const masonryCols = {
+  1: 'columns-1', 2: 'columns-2', 3: 'columns-2 md:columns-3',
+  4: 'columns-2 md:columns-4', 5: 'columns-2 md:columns-5', 6: 'columns-3 md:columns-6',
+}[Math.min(6, Math.max(1, columns))] ?? 'columns-2 md:columns-3';
+
+const hoverImg = {
+  none: '',
+  zoom: 'transition-transform duration-300 group-hover:scale-105',
+  fade: 'transition-opacity duration-300 group-hover:opacity-80',
+  overlay: '',
+}[hoverEffect];
+---
+<div class:list={['mb-12', customClass]} {...rest}>
+  {variant === 'masonry' ? (
+    <div class:list={[masonryCols, gapClass]}>
+      {shown.map((img, i) => (
+        <figure class="group relative mb-4 break-inside-avoid">
+          {lightbox ? (
+            <button
+              type="button"
+              data-gallery-trigger={i}
+              aria-haspopup="dialog"
+              aria-label={img.alt || `Agrandir l'image ${i + 1}`}
+              class:list={['block w-full overflow-hidden', roundedClass]}
+            >
+              <img src={img.thumb ?? img.src} alt={img.alt ?? ''} loading="lazy" decoding="async" class:list={['w-full', hoverImg]} />
+            </button>
+          ) : (
+            <img src={img.thumb ?? img.src} alt={img.alt ?? ''} loading="lazy" decoding="async" class:list={['w-full overflow-hidden', roundedClass]} />
+          )}
+          {showCaptions && img.caption && (
+            <figcaption class="mt-1 text-sm text-[var(--bricks-color-text-muted,#475569)]">{img.caption}</figcaption>
+          )}
+        </figure>
+      ))}
+    </div>
+  ) : (
+    <div class:list={['grid', colsClass, gapClass]}>
+      {shown.map((img, i) => {
+        const isFeatured = variant === 'featured' && i === 0;
+        const inner = (
+          <>
+            <div
+              class:list={['relative h-full w-full overflow-hidden bg-[var(--bricks-color-surface-alt,#f1f5f9)]', roundedClass]}
+              style={aspectRatio !== 'auto' ? `aspect-ratio:${aspectRatio}` : undefined}
+            >
+              <img
+                src={img.thumb ?? img.src}
+                alt={img.alt ?? ''}
+                loading={i === 0 ? 'eager' : 'lazy'}
+                decoding="async"
+                class:list={['h-full w-full object-cover', hoverImg]}
+              />
+              {hoverEffect === 'overlay' && (
+                <span class="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/30" aria-hidden="true"></span>
+              )}
+            </div>
+            {showCaptions && img.caption && (
+              <figcaption class="mt-1 text-sm text-[var(--bricks-color-text-muted,#475569)]">{img.caption}</figcaption>
+            )}
+          </>
+        );
+        return (
+          <figure class:list={['group relative m-0', isFeatured ? 'col-span-2 row-span-2' : '']}>
+            {lightbox ? (
+              <button
+                type="button"
+                data-gallery-trigger={i}
+                aria-haspopup="dialog"
+                aria-label={img.alt || `Agrandir l'image ${i + 1}`}
+                class="block h-full w-full text-left"
+              >
+                {inner}
+              </button>
+            ) : (
+              inner
+            )}
+          </figure>
+        );
+      })}
+    </div>
+  )}
+
+  {lightbox && (
+    <dialog
+      data-gallery-dialog
+      class="m-auto max-h-[90vh] w-full max-w-5xl bg-transparent p-0 backdrop:bg-black/80"
+      aria-label="Visionneuse d'images"
+    >
+      <div class="relative flex items-center justify-center">
+        <img data-gallery-img src="" alt="" class="max-h-[85vh] w-auto max-w-full rounded-lg object-contain" />
+        <p data-gallery-caption class="absolute bottom-0 left-0 right-0 bg-black/60 p-2 text-center text-sm text-white" hidden></p>
+
+        <button type="button" data-gallery-close aria-label="Fermer" class="absolute -top-10 right-0 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-slate-900 hover:bg-white">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6L6 18" /><path d="M6 6l12 12" /></svg>
+        </button>
+        <button type="button" data-gallery-prev aria-label="Image précédente" class="absolute left-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-900 hover:bg-white">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6" /></svg>
+        </button>
+        <button type="button" data-gallery-next aria-label="Image suivante" class="absolute right-2 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-900 hover:bg-white">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 18l6-6-6-6" /></svg>
+        </button>
+      </div>
+    </dialog>
+  )}
+</div>
+
+<script
+  is:inline
+  define:vars={{ galleryId, sources: shown.map((i) => ({ src: i.src, alt: i.alt ?? '', caption: i.caption ?? '' })) }}
+>
+  // Données par instance attachées à l'élément pour le script global.
+  (window.__bricksGalleries = window.__bricksGalleries || {})[galleryId] = sources;
+</script>
+
+<script>
+  type GallerySource = { src: string; alt: string; caption: string };
+
+  function setupGallery(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+
+    const dialog = root.querySelector<HTMLDialogElement>('[data-gallery-dialog]');
+    if (!dialog) return;
+    const sources: GallerySource[] =
+      (window as any).__bricksGalleries?.[root.id] ?? [];
+    if (sources.length === 0) return;
+
+    const imgEl = dialog.querySelector<HTMLImageElement>('[data-gallery-img]');
+    const captionEl = dialog.querySelector<HTMLElement>('[data-gallery-caption]');
+    let index = 0;
+
+    const render = () => {
+      const s = sources[index];
+      if (!imgEl || !s) return;
+      imgEl.src = s.src;
+      imgEl.alt = s.alt;
+      if (captionEl) {
+        captionEl.textContent = s.caption;
+        captionEl.hidden = !s.caption;
+      }
+    };
+
+    const open = (i: number) => {
+      index = i;
+      render();
+      if (!dialog.open) dialog.showModal();
+    };
+    const move = (delta: number) => {
+      index = (index + delta + sources.length) % sources.length;
+      render();
+    };
+
+    root.querySelectorAll<HTMLElement>('[data-gallery-trigger]').forEach((btn) => {
+      btn.addEventListener('click', () => open(Number(btn.dataset.galleryTrigger)));
+    });
+    dialog.querySelector('[data-gallery-close]')?.addEventListener('click', () => dialog.close());
+    dialog.querySelector('[data-gallery-prev]')?.addEventListener('click', () => move(-1));
+    dialog.querySelector('[data-gallery-next]')?.addEventListener('click', () => move(1));
+
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') move(-1);
+      if (e.key === 'ArrowRight') move(1);
+    });
+  }
+
+  function initAllGalleries() {
+    document.querySelectorAll<HTMLElement>('[id^="gallery-"]').forEach((el) => {
+      if (el.querySelector('[data-gallery-dialog]')) setupGallery(el);
+    });
+  }
+
+  initAllGalleries();
+  document.addEventListener('astro:page-load', initAllGalleries);
+</script>

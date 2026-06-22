@@ -1,0 +1,131 @@
+---
+/**
+ * video — Lecteur vidéo YouTube / Vimeo / fichier local.
+ *
+ * Schema catalog : {
+ *   src (REQUIS), title?, aspectRatio?, autoplay?, muted?, loop?,
+ *   controls?, poster?, lazy?, rounded?, shadow?, maxWidth?
+ * }
+ *
+ * Fonctionnement : détecte le type de `src`. YouTube/Vimeo → <iframe> embed
+ * (avec `loading="lazy"` si `lazy`). Sinon → <video> natif avec `poster`.
+ * Le ratio est garanti par un conteneur `aspect-ratio` CSS.
+ *
+ * Théming : neutre (média plein cadre). Le coin arrondi et l'ombre sont
+ * paramétrables ; bloc autonome → marge basse mb-12.
+ */
+interface Props {
+  /** URL YouTube, Vimeo ou fichier vidéo direct. */
+  src: string;
+  /** Titre pour l'accessibilité (title iframe / aria-label). Défaut : "Vidéo". */
+  title?: string;
+  /** Ratio d'affichage. Défaut : "16/9". */
+  aspectRatio?: '16/9' | '4/3' | '1/1' | '9/16' | '21/9';
+  /** Lecture automatique. Défaut : false. */
+  autoplay?: boolean;
+  /** Démarrer en sourdine. Défaut : false. */
+  muted?: boolean;
+  /** Lecture en boucle. Défaut : false. */
+  loop?: boolean;
+  /** Afficher les contrôles. Défaut : true. */
+  controls?: boolean;
+  /** Image de couverture (fichiers directs). */
+  poster?: string;
+  /** Chargement différé de l'iframe. Défaut : true. */
+  lazy?: boolean;
+  /** Coins arrondis. Défaut : "md". */
+  rounded?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
+  /** Ombre portée. Défaut : true. */
+  shadow?: boolean;
+  /** Largeur max. Défaut : "full". */
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  src,
+  title = 'Vidéo',
+  aspectRatio = '16/9',
+  autoplay = false,
+  muted = false,
+  loop = false,
+  controls = true,
+  poster,
+  lazy = true,
+  rounded = 'md',
+  shadow = true,
+  maxWidth = 'full',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+// Détection du provider.
+const ytMatch = src.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([\w-]{11})/);
+const vimeoMatch = src.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+
+let embedUrl: string | null = null;
+if (ytMatch) {
+  const params = new URLSearchParams();
+  if (autoplay) params.set('autoplay', '1');
+  if (muted || autoplay) params.set('mute', '1');
+  if (loop) {
+    params.set('loop', '1');
+    params.set('playlist', ytMatch[1]);
+  }
+  if (!controls) params.set('controls', '0');
+  embedUrl = `https://www.youtube-nocookie.com/embed/${ytMatch[1]}${params.toString() ? `?${params}` : ''}`;
+} else if (vimeoMatch) {
+  const params = new URLSearchParams();
+  if (autoplay) params.set('autoplay', '1');
+  if (muted || autoplay) params.set('muted', '1');
+  if (loop) params.set('loop', '1');
+  embedUrl = `https://player.vimeo.com/video/${vimeoMatch[1]}${params.toString() ? `?${params}` : ''}`;
+}
+
+const roundedClass = {
+  none: 'rounded-none', sm: 'rounded-sm', md: 'rounded-md', lg: 'rounded-lg', xl: 'rounded-xl',
+}[rounded];
+
+const maxWidthClass = {
+  sm: 'max-w-screen-sm', md: 'max-w-screen-md', lg: 'max-w-screen-lg', xl: 'max-w-screen-xl', full: 'max-w-full',
+}[maxWidth];
+---
+<div class:list={['mb-12', maxWidthClass, maxWidth !== 'full' ? 'mx-auto' : '', customClass]} {...rest}>
+  <div
+    class:list={['relative w-full overflow-hidden bg-black', roundedClass, shadow ? 'shadow-lg' : '']}
+    style={`aspect-ratio:${aspectRatio}`}
+  >
+    {embedUrl ? (
+      <iframe
+        src={embedUrl}
+        title={title}
+        loading={lazy ? 'lazy' : 'eager'}
+        class="absolute inset-0 h-full w-full border-0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen
+        referrerpolicy="strict-origin-when-cross-origin"
+      />
+    ) : (
+      <video
+        src={src}
+        title={title}
+        aria-label={title}
+        poster={poster}
+        controls={controls}
+        autoplay={autoplay}
+        muted={muted || autoplay}
+        loop={loop}
+        playsinline
+        preload={lazy ? 'none' : 'metadata'}
+        class="absolute inset-0 h-full w-full object-contain"
+      >
+        Votre navigateur ne supporte pas l'élément vidéo.
+      </video>
+    )}
+  </div>
+</div>

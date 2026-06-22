@@ -1,0 +1,125 @@
+---
+/**
+ * page-layout — Layout de page avec sidebar (header / sidebar / main / footer).
+ * Schema catalog : {
+ *   variant?, maxWidth?, padding?, gap?, sidebarWidth?,
+ *   stickyHeader?, stickyFooter?, minHeight?
+ * }
+ *
+ * Wrapper de layout : pas de marge imposée, laisse les enfants gérer.
+ * Slots : "header", "sidebar", "children" (= contenu principal), "footer".
+ * La zone principale est rendue dans un landmark <main>.
+ */
+interface Props {
+  /** Disposition. Défaut : "default". */
+  variant?: 'default' | 'sidebar-left' | 'sidebar-right' | 'full-width' | 'narrow';
+  /** Largeur max du contenu (CSS). Défaut : "1200px". */
+  maxWidth?: string;
+  /** Padding horizontal (CSS). Défaut : "1rem". */
+  padding?: string;
+  /** Espacement contenu/sidebar (CSS). Défaut : "2rem". */
+  gap?: string;
+  /** Largeur de la sidebar (CSS). Défaut : "280px". */
+  sidebarWidth?: string;
+  /** Header collant. Défaut : false. */
+  stickyHeader?: boolean;
+  /** Footer collant. Défaut : false. */
+  stickyFooter?: boolean;
+  /** Hauteur minimale (CSS). Défaut : "100vh". */
+  minHeight?: string;
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  variant = 'default',
+  maxWidth = '1200px',
+  padding = '1rem',
+  gap = '2rem',
+  sidebarWidth = '280px',
+  stickyHeader = false,
+  stickyFooter = false,
+  minHeight = '100vh',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const hasSidebar = variant === 'sidebar-left' || variant === 'sidebar-right';
+const sidebarFirst = variant === 'sidebar-left';
+
+// "narrow" resserre la colonne de contenu, "full-width" supprime la largeur max.
+const effectiveMaxWidth =
+  variant === 'full-width'
+    ? '100%'
+    : variant === 'narrow'
+      ? '768px'
+      : maxWidth;
+
+const innerStyle = `max-width:${effectiveMaxWidth};padding-left:${padding};padding-right:${padding}`;
+const bodyStyle = hasSidebar
+  ? `display:grid;gap:${gap};grid-template-columns:1fr;align-items:start;--pl-sidebar-w:${sidebarWidth}`
+  : '';
+---
+
+<div
+  class:list={['bricks-page-layout flex flex-col', customClass]}
+  style={`min-height:${minHeight}`}
+  data-variant={variant}
+  {...rest}
+>
+  {Astro.slots.has('header') && (
+    <header
+      class:list={['w-full z-30', stickyHeader ? 'sticky top-0' : '']}
+    >
+      <slot name="header" />
+    </header>
+  )}
+
+  <div class="bricks-pl-inner mx-auto w-full flex-1" style={innerStyle}>
+    {hasSidebar ? (
+      <div class="bricks-pl-body" style={bodyStyle} data-sidebar-first={sidebarFirst ? 'true' : 'false'}>
+        {Astro.slots.has('sidebar') && (
+          <aside
+            class:list={['bricks-pl-aside', sidebarFirst ? '' : 'lg:order-last']}
+          >
+            <slot name="sidebar" />
+          </aside>
+        )}
+        <main id="main-content" role="main" class="min-w-0">
+          <slot name="children" />
+          <slot />
+        </main>
+      </div>
+    ) : (
+      <main id="main-content" role="main" class="min-w-0">
+        <slot name="children" />
+        <slot />
+      </main>
+    )}
+  </div>
+
+  {Astro.slots.has('footer') && (
+    <footer
+      class:list={['w-full mt-auto', stickyFooter ? 'sticky bottom-0' : '']}
+    >
+      <slot name="footer" />
+    </footer>
+  )}
+</div>
+
+<style>
+  @media (min-width: 1024px) {
+    .bricks-pl-body[data-sidebar-first='true'] {
+      grid-template-columns: var(--pl-sidebar-w, 280px) 1fr;
+    }
+    .bricks-pl-body[data-sidebar-first='false'] {
+      grid-template-columns: 1fr var(--pl-sidebar-w, 280px);
+    }
+    .bricks-pl-aside {
+      width: var(--pl-sidebar-w, 280px);
+    }
+  }
+</style>

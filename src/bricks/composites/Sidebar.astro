@@ -1,0 +1,196 @@
+---
+/**
+ * sidebar — Barre latérale avec navigation (landmark <aside> + <nav>).
+ * Schema catalog : {
+ *   logo?, items?, footerItems?, position?, variant?,
+ *   collapsible?, collapsed?, width?, collapsedWidth?
+ * }
+ *
+ * logo : { text?, href?, src?, alt? }
+ * items / footerItems : [{ label, href, icon?, active? }]
+ * Slot par défaut + slot nommé "children" pour contenu additionnel.
+ * Théming var(--bricks-color-*).
+ */
+interface LogoConfig {
+  text?: string;
+  href?: string;
+  src?: string;
+  alt?: string;
+}
+
+interface SidebarItem {
+  label: string;
+  href: string;
+  icon?: string;
+  active?: boolean;
+}
+
+interface Props {
+  /** Logo / titre en tête. Défaut : { text: "App", href: "/" }. */
+  logo?: LogoConfig;
+  /** Items de navigation principaux. Défaut : []. */
+  items?: SidebarItem[];
+  /** Items de navigation en pied. Défaut : []. */
+  footerItems?: SidebarItem[];
+  /** Position. Défaut : "left". */
+  position?: 'left' | 'right';
+  /** Thème. Défaut : "dark". */
+  variant?: 'default' | 'dark' | 'light';
+  /** Repliable. Défaut : true. */
+  collapsible?: boolean;
+  /** État replié initial. Défaut : false. */
+  collapsed?: boolean;
+  /** Largeur déployée (CSS). Défaut : "250px". */
+  width?: string;
+  /** Largeur repliée (CSS). Défaut : "70px". */
+  collapsedWidth?: string;
+  /** Label accessible. Défaut : "Navigation latérale". */
+  ariaLabel?: string;
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  logo = { text: 'App', href: '/' },
+  items = [],
+  footerItems = [],
+  position = 'left',
+  variant = 'dark',
+  collapsible = true,
+  collapsed = false,
+  width = '250px',
+  collapsedWidth = '70px',
+  ariaLabel = 'Navigation latérale',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const sidebarId = `sidebar-${_brickId ?? Math.random().toString(36).slice(2, 8)}`;
+
+const variantClass = {
+  default:
+    'bg-[var(--bricks-color-surface,#ffffff)] text-[var(--bricks-color-text,#0f172a)] border-[var(--bricks-color-border,#e2e8f0)]',
+  dark: 'bg-[var(--bricks-color-surface-dark,#0f172a)] text-white border-white/10',
+  light:
+    'bg-[var(--bricks-color-surface-alt,#f8fafc)] text-[var(--bricks-color-text,#0f172a)] border-[var(--bricks-color-border,#e2e8f0)]',
+}[variant];
+
+const borderSide = position === 'left' ? 'border-r' : 'border-l';
+
+function renderItems(list: SidebarItem[]) {
+  return list;
+}
+const main = renderItems(items);
+const footer = renderItems(footerItems);
+---
+
+<aside
+  id={sidebarId}
+  data-sidebar
+  data-collapsed={collapsed ? 'true' : 'false'}
+  aria-label={ariaLabel}
+  class:list={[
+    'flex flex-col shrink-0 h-full',
+    position === 'left' ? '' : 'order-last',
+    borderSide,
+    variantClass,
+    customClass,
+  ]}
+  style={`width:${collapsed ? collapsedWidth : width};--sidebar-w:${width};--sidebar-cw:${collapsedWidth}`}
+  {...rest}
+>
+  <div class="flex items-center justify-between gap-2 px-4 py-4">
+    <a href={logo.href ?? '/'} class="flex items-center gap-2 no-underline font-extrabold tracking-tight text-inherit truncate">
+      {logo.src && <img src={logo.src} alt={logo.alt ?? logo.text ?? 'Logo'} class="h-7 w-auto shrink-0" />}
+      {logo.text && <span data-sidebar-label class="truncate">{logo.text}</span>}
+    </a>
+    {collapsible && (
+      <button
+        type="button"
+        data-sidebar-toggle
+        aria-controls={sidebarId}
+        aria-expanded={collapsed ? 'false' : 'true'}
+        aria-label="Replier ou déployer la navigation"
+        class="shrink-0 rounded p-1.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+      >
+        <svg aria-hidden="true" width="18" height="18" viewBox="0 0 20 20" fill="none">
+          <path d="M12 5 7 10l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </button>
+    )}
+  </div>
+
+  <nav aria-label={ariaLabel} class="flex-1 overflow-y-auto px-2 py-2">
+    <ul class="list-none m-0 p-0 flex flex-col gap-1">
+      {main.map((item) => (
+        <li>
+          <a
+            href={item.href}
+            aria-current={item.active ? 'page' : undefined}
+            class:list={[
+              'flex items-center gap-3 rounded px-3 py-2 no-underline transition-colors',
+              item.active
+                ? 'bg-[var(--bricks-color-accent,#2563eb)] text-white'
+                : 'hover:bg-black/10 dark:hover:bg-white/10',
+            ]}
+          >
+            {item.icon && <span class="shrink-0" data-icon={item.icon} aria-hidden="true"></span>}
+            <span data-sidebar-label class="truncate">{item.label}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+    <slot name="children" />
+    <slot />
+  </nav>
+
+  {footer.length > 0 && (
+    <div class="mt-auto border-t border-current/10 px-2 py-2">
+      <ul class="list-none m-0 p-0 flex flex-col gap-1">
+        {footer.map((item) => (
+          <li>
+            <a
+              href={item.href}
+              aria-current={item.active ? 'page' : undefined}
+              class="flex items-center gap-3 rounded px-3 py-2 no-underline transition-colors hover:bg-black/10 dark:hover:bg-white/10"
+            >
+              {item.icon && <span class="shrink-0" data-icon={item.icon} aria-hidden="true"></span>}
+              <span data-sidebar-label class="truncate">{item.label}</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )}
+</aside>
+
+<script>
+  function setupSidebar(root: HTMLElement) {
+    if (root.dataset.initialized === 'true') return;
+    root.dataset.initialized = 'true';
+    const toggle = root.querySelector<HTMLButtonElement>('[data-sidebar-toggle]');
+    if (!toggle) return;
+    toggle.addEventListener('click', () => {
+      const collapsed = root.dataset.collapsed === 'true';
+      const next = !collapsed;
+      root.dataset.collapsed = next ? 'true' : 'false';
+      toggle.setAttribute('aria-expanded', next ? 'false' : 'true');
+      const w = getComputedStyle(root).getPropertyValue('--sidebar-w').trim();
+      const cw = getComputedStyle(root).getPropertyValue('--sidebar-cw').trim();
+      root.style.width = next ? cw : w;
+      root
+        .querySelectorAll<HTMLElement>('[data-sidebar-label]')
+        .forEach((el) => (el.hidden = next));
+    });
+  }
+  function initAllSidebars() {
+    document
+      .querySelectorAll<HTMLElement>('[data-sidebar]')
+      .forEach((el) => setupSidebar(el));
+  }
+  initAllSidebars();
+  document.addEventListener('astro:page-load', initAllSidebars);
+</script>

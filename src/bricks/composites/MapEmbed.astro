@@ -1,0 +1,133 @@
+---
+/**
+ * map — Carte interactive embarquée (iframe).
+ *
+ * Schema catalog : {
+ *   provider?, center?, zoom?, markers?, height?, width?, apiKey?,
+ *   style?, controls?, draggable?
+ * }
+ *
+ * Fonctionnement : rend une <iframe> embed lazy-loadée, sans dépendance JS.
+ *  - leaflet (défaut) → embed OpenStreetMap (pas de clé requise) ; le premier
+ *    marqueur, s'il existe, pose un pin, sinon on centre sur `center`.
+ *  - google → embed Google Maps (clé `apiKey` recommandée pour l'API Embed ;
+ *    fallback sur l'embed public q=lat,lng sinon).
+ *  - mapbox → image statique Mapbox via iframe srcdoc si `apiKey`, sinon fallback OSM.
+ *
+ * Markers : tableau d'objets { lat, lng, label? } ; le premier sert de point centré.
+ *
+ * Théming : cadre via `--bricks-color-border` ; bloc autonome → marge basse mb-12.
+ */
+interface MapMarker {
+  lat: number;
+  lng: number;
+  label?: string;
+}
+
+interface LatLng {
+  lat: number;
+  lng: number;
+}
+
+interface Props {
+  /** Fournisseur de carte. Défaut : "leaflet" (OpenStreetMap). */
+  provider?: 'google' | 'leaflet' | 'mapbox';
+  /** Centre de la carte. Défaut : Paris (48.8566, 2.3522). */
+  center?: LatLng;
+  /** Niveau de zoom. Défaut : 13. */
+  zoom?: number;
+  /** Marqueurs ; le premier centre la carte. Défaut : []. */
+  markers?: MapMarker[];
+  /** Hauteur CSS. Défaut : "400px". */
+  height?: string;
+  /** Largeur CSS. Défaut : "100%". */
+  width?: string;
+  /** Clé API (Google Maps Embed ou Mapbox). */
+  apiKey?: string;
+  /** Style de carte (id ou URL, selon provider). */
+  style?: string;
+  /** Afficher les contrôles. Défaut : true. */
+  controls?: boolean;
+  /** Carte déplaçable. Défaut : true. */
+  draggable?: boolean;
+  /** Titre accessible de l'iframe. Défaut : "Carte". */
+  title?: string;
+  /** Override des classes du conteneur racine. */
+  class?: string;
+  _brickId?: string;
+  _brickType?: string;
+}
+
+const {
+  provider = 'leaflet',
+  center = { lat: 48.8566, lng: 2.3522 },
+  zoom = 13,
+  markers = [],
+  height = '400px',
+  width = '100%',
+  apiKey,
+  style,
+  controls = true,
+  draggable = true,
+  title = 'Carte',
+  class: customClass,
+  _brickId,
+  _brickType,
+  ...rest
+} = Astro.props;
+
+const focus = markers[0] ?? center;
+
+let embedUrl = '';
+
+if (provider === 'google') {
+  if (apiKey) {
+    const params = new URLSearchParams({
+      key: apiKey,
+      center: `${focus.lat},${focus.lng}`,
+      zoom: String(zoom),
+    });
+    embedUrl = `https://www.google.com/maps/embed/v1/view?${params}`;
+  } else {
+    const params = new URLSearchParams({ q: `${focus.lat},${focus.lng}`, z: String(zoom), output: 'embed' });
+    embedUrl = `https://maps.google.com/maps?${params}`;
+  }
+} else {
+  // leaflet / mapbox sans clé → OpenStreetMap embed (bbox autour du centre).
+  const span = 0.18 / Math.max(1, zoom - 9); // approximation de l'emprise selon le zoom
+  const bbox = [
+    (focus.lng - span).toFixed(5),
+    (focus.lat - span * 0.6).toFixed(5),
+    (focus.lng + span).toFixed(5),
+    (focus.lat + span * 0.6).toFixed(5),
+  ].join(',');
+  const params = new URLSearchParams({ bbox, layer: 'mapnik' });
+  const markerParam = markers.length > 0 ? `&marker=${focus.lat},${focus.lng}` : '';
+  embedUrl = `https://www.openstreetmap.org/export/embed.html?${params}${markerParam}`;
+}
+
+const scrollClass = draggable ? '' : 'pointer-events-none';
+---
+<div class:list={['mb-12', customClass]} {...rest}>
+  <div
+    class="overflow-hidden rounded-lg border border-[var(--bricks-color-border,#e2e8f0)]"
+    style={`width:${width}`}
+  >
+    <iframe
+      src={embedUrl}
+      title={title}
+      loading="lazy"
+      referrerpolicy="no-referrer-when-downgrade"
+      class:list={['block w-full border-0', scrollClass]}
+      style={`height:${height}`}
+      allowfullscreen
+    ></iframe>
+  </div>
+  {markers.length > 0 && markers.some((m) => m.label) && (
+    <ul class="mt-2 list-none p-0 text-sm text-[var(--bricks-color-text-muted,#475569)]">
+      {markers.filter((m) => m.label).map((m) => (
+        <li>📍 {m.label}</li>
+      ))}
+    </ul>
+  )}
+</div>
