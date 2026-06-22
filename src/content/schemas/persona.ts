@@ -1,5 +1,5 @@
 /**
- * Schema PERSONA — convention v3 réseau Factory.
+ * Schema PERSONA — convention v3 réseau de sites.
  *
  * Un persona = un profil utilisateur cible avec ses pain-points et ses
  * recommandations produits. Consommé par :

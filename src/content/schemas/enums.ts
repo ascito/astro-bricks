@@ -1,5 +1,5 @@
 /**
- * Enums Zod communs réutilisables par tous les sites Factory.
+ * Enums Zod communs réutilisables par tous les sites consommateurs.
  *
  * Les enums spécifiques à un domaine (ex: types de saunas, types de stations météo)
  * sont définis localement dans chaque site.

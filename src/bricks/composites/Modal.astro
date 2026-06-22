@@ -132,6 +132,7 @@ const confirmClass = {
     )}
 
     <div class="overflow-y-auto px-6 py-5 text-[var(--bricks-color-text-muted,#475569)] [&_a]:text-[var(--bricks-color-accent,#2563eb)] [&_a]:underline">
+      <slot name="children" />
       <slot />
     </div>
 

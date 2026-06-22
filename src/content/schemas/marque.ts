@@ -1,7 +1,7 @@
 /**
  * Schema MARQUE — convention v3.
  *
- * Schema de base utilisable directement par n'importe quel site Factory.
+ * Schema de base utilisable directement par n'importe quel site consommateur.
  * Pour ajouter des champs spécifiques au domaine, utiliser `.extend()` :
  *
  * ```ts

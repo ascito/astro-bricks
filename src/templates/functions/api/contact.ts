@@ -1,10 +1,10 @@
 /**
  * Template Cloudflare Pages Function — Proxy formulaire contact → n8n
  *
- * À copier dans le dossier `functions/api/contact.ts` de chaque site Factory.
+ * À copier dans le dossier `functions/api/contact.ts` de chaque site consommateur.
  *
  * Configuration Cloudflare Pages requise :
- *  - `CONTACT_WEBHOOK_URL` (Secret) — URL n8n complète (ex: https://n8n.factory.mon-site.fr/webhook/contact-XXX)
+ *  - `CONTACT_WEBHOOK_URL` (Secret) — URL n8n complète (ex: https://n8n.mon-site.fr/webhook/contact-XXX)
  *  - `SITE_ORIGIN` (Variable) — origine du site (ex: https://mon-site.fr)
  *
  * Avantages :

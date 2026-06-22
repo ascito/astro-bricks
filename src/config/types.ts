@@ -1,5 +1,5 @@
 /**
- * Type SiteConfig — configuration unique d'un site Factory consommant astro-bricks.
+ * Type SiteConfig — configuration unique d'un site consommateur consommant astro-bricks.
  *
  * Chaque site contient un seul fichier `site.config.ts` à la racine :
  *
@@ -116,7 +116,7 @@ export interface FooterConfig {
 export type AmazonMarketplace = 'fr' | 'com' | 'co.uk' | 'de' | 'it' | 'es' | 'ca' | 'co.jp';
 
 /**
- * Configuration complète d'un site Factory.
+ * Configuration complète d'un site consommateur.
  */
 export interface SiteConfig {
   // ─── Identité ───

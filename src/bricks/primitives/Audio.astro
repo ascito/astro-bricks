@@ -67,24 +67,13 @@ const artistClass = 'text-sm text-[var(--bricks-color-text-muted,#475569)]';
 
 const cardClass =
   'rounded-lg border p-4 border-[var(--bricks-color-border,#e2e8f0)] bg-[var(--bricks-color-surface,#ffffff)]';
-
-const audioEl = (
-  <audio
-    src={src}
-    controls={controls}
-    autoplay={autoplay}
-    loop={loop}
-    muted={muted}
-    preload={preload}
-    class="w-full"
-    aria-label={title ?? 'Lecteur audio'}
-  >
-    Votre navigateur ne supporte pas l'élément audio.
-  </audio>
-);
 ---
 {variant === 'minimal' ? (
-  <div class:list={['mb-12', customClass]} {...rest}>{audioEl}</div>
+  <div class:list={['mb-12', customClass]} {...rest}>
+    <audio src={src} controls={controls} autoplay={autoplay} loop={loop} muted={muted} preload={preload} class="w-full" aria-label={title ?? 'Lecteur audio'}>
+      Votre navigateur ne supporte pas l'élément audio.
+    </audio>
+  </div>
 ) : variant === 'full' ? (
   <div class:list={['mb-12 flex items-center gap-4', cardClass, customClass]} {...rest}>
     {cover && (
@@ -99,13 +88,17 @@ const audioEl = (
     <div class="min-w-0 flex-1">
       {title && <p class={`mb-0.5 truncate ${labelClass}`}>{title}</p>}
       {artist && <p class={`mb-2 truncate ${artistClass}`}>{artist}</p>}
-      {audioEl}
+      <audio src={src} controls={controls} autoplay={autoplay} loop={loop} muted={muted} preload={preload} class="w-full" aria-label={title ?? 'Lecteur audio'}>
+        Votre navigateur ne supporte pas l'élément audio.
+      </audio>
     </div>
   </div>
 ) : (
   <div class:list={['mb-12', hasMeta ? cardClass : '', customClass]} {...rest}>
     {title && <p class={`mb-0.5 ${labelClass}`}>{title}</p>}
     {artist && <p class={`mb-2 ${artistClass}`}>{artist}</p>}
-    {audioEl}
+    <audio src={src} controls={controls} autoplay={autoplay} loop={loop} muted={muted} preload={preload} class="w-full" aria-label={title ?? 'Lecteur audio'}>
+      Votre navigateur ne supporte pas l'élément audio.
+    </audio>
   </div>
 )}

@@ -1,5 +1,5 @@
 /**
- * Helper typé pour créer le `site.config.ts` d'un site Factory.
+ * Helper typé pour créer le `site.config.ts` d'un site consommateur.
  *
  * Apporte :
  *  - Autocomplétion TypeScript dans l'IDE

@@ -125,6 +125,7 @@ const anchorClass = {
       </header>
     )}
     <div class="flex-1 overflow-y-auto px-5 py-4 text-[var(--bricks-color-text-muted,#475569)] [&_a]:text-[var(--bricks-color-accent,#2563eb)] [&_a]:underline">
+      <slot name="children" />
       <slot />
     </div>
   </div>

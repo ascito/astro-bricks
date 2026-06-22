@@ -154,7 +154,7 @@ const TABLIST: Record<string, string> = {
           hidden={!isActive}
           class="text-[var(--bricks-color-text,#0f172a)] [&_a]:text-[var(--bricks-color-accent,#2563eb)] [&_a]:underline"
         >
-          {tab.content ? <Fragment set:html={tab.content} /> : <slot name={`panel-${tab.id}`} />}
+          {tab.content && <Fragment set:html={tab.content} />}
         </div>
       );
     })}

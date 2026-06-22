@@ -14,6 +14,10 @@
 import type { ResolvedBrick } from './engine/types';
 import { BRICK_REGISTRY } from './engine/registry';
 import Fallback from './bricks/Fallback.astro';
+// Récursion via import explicite de la brique sur elle-même : plus robuste
+// qu'`Astro.self`, qui perdait la variable de boucle (`entry is not defined`)
+// au build minifié quand on lui passe un `slot=` dynamique.
+import BrickNode from './BrickNode.astro';
 
 interface Props {
   node: ResolvedBrick;
@@ -25,14 +29,11 @@ const slotNames = Object.keys(node.children);
 const hasSlots = slotNames.length > 0;
 const isFallback = Component === Fallback;
 
-// On aplatit en une liste de {slot, child} pour éviter la double map
-// et n'utiliser slot= que sur les enfants concrets (jamais sur <Fragment>).
-const slottedChildren: Array<{ slot: string; child: ResolvedBrick }> = [];
-for (const slotName of slotNames) {
-  for (const child of node.children[slotName]) {
-    slottedChildren.push({ slot: slotName, child });
-  }
-}
+// Vocabulaire complet des slots de la lib. On rend chaque slot avec un nom
+// LITTÉRAL statique (cf. bloc template) : un `slot=` dynamique issu d'une
+// variable de boucle casse au build minifié (`entry is not defined`), car
+// Astro extrait les enfants slottés dans des fonctions séparées par nom.
+const c = node.children;
 ---
 
 {!hasSlots && isFallback && (
@@ -47,8 +48,13 @@ for (const slotName of slotNames) {
 
 {hasSlots && (
   <Component {...node.inputs} _brickId={node.id} _brickType={node.brick}>
-    {slottedChildren.map((entry) => (
-      <Astro.self node={entry.child} slot={entry.slot} />
-    ))}
+    {c.children?.map((child) => <BrickNode node={child} slot="children" />)}
+    {c.body?.map((child) => <BrickNode node={child} slot="body" />)}
+    {c.header?.map((child) => <BrickNode node={child} slot="header" />)}
+    {c.footer?.map((child) => <BrickNode node={child} slot="footer" />)}
+    {c.actions?.map((child) => <BrickNode node={child} slot="actions" />)}
+    {c.sidebar?.map((child) => <BrickNode node={child} slot="sidebar" />)}
+    {c.trigger?.map((child) => <BrickNode node={child} slot="trigger" />)}
+    {c.legal?.map((child) => <BrickNode node={child} slot="legal" />)}
   </Component>
 )}
